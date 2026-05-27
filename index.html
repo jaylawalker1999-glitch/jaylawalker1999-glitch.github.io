@@ -113,9 +113,15 @@
   .skip-nav:focus { top: 16px; }
 
   .glow-tl {
-    position: fixed; top: -300px; left: -300px;
-    width: 700px; height: 700px;
-    background: radial-gradient(circle, rgba(200,146,10,0.13) 0%, transparent 65%);
+    position: fixed; top: -200px; left: -100px;
+    width: 900px; height: 600px;
+    background: radial-gradient(ellipse at top left, rgba(200,146,10,0.16) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+  .glow-tr {
+    position: fixed; top: -200px; right: -100px;
+    width: 900px; height: 600px;
+    background: radial-gradient(ellipse at top right, rgba(200,146,10,0.12) 0%, transparent 60%);
     pointer-events: none; z-index: 0;
   }
   .glow-br {
@@ -130,17 +136,18 @@
   nav {
     position: fixed; top: 0; left: 0; right: 0;
     z-index: 100;
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center; justify-content: center;
     padding: 14px 60px;
     background: rgba(8,8,8,0.92);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(200,146,10,0.15);
+    gap: 40px;
   }
   .nav-logo img { height: 52px; width: auto; }
   .nav-links { display: flex; gap: 36px; list-style: none; }
   .nav-links a {
     font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase;
-    color: rgba(255,255,255,0.5); text-decoration: none; transition: color 0.2s;
+    color: rgba(255,255,255,0.82); text-decoration: none; transition: color 0.2s;
   }
   .nav-links a:hover, .nav-links a:focus { color: var(--gold-light); outline: none; }
   .nav-right { display: flex; align-items: center; gap: 20px; }
@@ -684,12 +691,14 @@
 <a href="#main-content" class="skip-nav">Skip to main content</a>
 
 <div class="glow-tl" aria-hidden="true"></div>
+<div class="glow-tr" aria-hidden="true"></div>
 <div class="glow-br" aria-hidden="true"></div>
 
 <!-- MOBILE MENU -->
 <div class="mobile-menu" id="mobileMenu" role="dialog" aria-label="Navigation menu">
   <a href="#problem" onclick="closeMobile()">The Problem</a>
   <a href="#how" onclick="closeMobile()">How It Works</a>
+  <a href="#demo" onclick="closeMobile()">See It Live</a>
   <a href="#about" onclick="closeMobile()">About</a>
   <a href="#pricing" onclick="closeMobile()">Pricing</a>
   <a href="#faq" onclick="closeMobile()">FAQ</a>
@@ -706,6 +715,7 @@
     <ul class="nav-links">
       <li><a href="#problem">The Problem</a></li>
       <li><a href="#how">How It Works</a></li>
+      <li><a href="#demo">See It Live</a></li>
       <li><a href="#about">About</a></li>
       <li><a href="#pricing">Pricing</a></li>
       <li><a href="#faq">FAQ</a></li>
@@ -901,7 +911,158 @@
 
 <div class="section-divider">✦ — ✦</div>
 
-<!-- PRICING -->
+<!-- DEMO — BEFORE & AFTER -->
+<section id="demo" aria-labelledby="demo-heading" style="background:var(--black);">
+  <div class="section-wrap" style="max-width:1100px;">
+    <div class="section-label">See It In Action</div>
+    <h2 id="demo-heading" class="section-title">Your Studio.<br><em>Without the Chaos.</em></h2>
+    <p style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:rgba(255,255,255,0.65);line-height:1.8;max-width:580px;margin-bottom:60px;">See what changes when Nova handles every DM, follow-up, and booking — automatically.</p>
+  </div>
+
+  <div style="display:flex;justify-content:center;align-items:flex-start;gap:48px;padding:0 24px 100px;flex-wrap:wrap;">
+
+    <!-- BEFORE PHONE -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:24px;">
+      <div style="font-size:0.58rem;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:#c0392b;">Before</div>
+      <div style="width:280px;height:580px;background:#0d0d0d;border-radius:44px;border:2px solid #2a2a2a;box-shadow:0 0 0 1px #111,0 40px 80px rgba(0,0,0,0.8);position:relative;overflow:hidden;flex-shrink:0;">
+        <div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);width:90px;height:28px;background:#000;border-radius:20px;z-index:10;"></div>
+        <div style="position:absolute;top:0;left:0;right:0;height:52px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 24px 6px;z-index:9;font-size:10px;font-weight:600;color:#f5f0e8;">
+          <span style="font-size:12px;font-weight:700;">9:41</span>
+          <div style="display:flex;gap:4px;align-items:center;font-size:9px;"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+        </div>
+        <div style="position:absolute;top:52px;left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
+          <div style="background:#f2f2f7;min-height:100%;padding-bottom:20px;">
+            <div style="padding:12px 16px 8px;font-size:22px;font-weight:700;color:#1c1c1e;font-family:-apple-system,sans-serif;">Notifications</div>
+            <div style="padding:0 16px 12px;font-size:13px;color:#8e8e93;font-family:-apple-system,sans-serif;">Monday, March 9</div>
+            <div style="padding:4px 16px 6px;font-size:11px;font-weight:600;color:#8e8e93;text-transform:uppercase;letter-spacing:0.5px;font-family:-apple-system,sans-serif;">Recent</div>
+
+            <div style="margin:0 12px 8px;background:white;border-radius:14px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+              <div style="width:36px;height:36px;border-radius:8px;background:#fff0f0;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">💬</div>
+              <div style="flex:1;">
+                <div style="font-size:10px;font-weight:600;color:#8e8e93;text-transform:uppercase;font-family:-apple-system,sans-serif;margin-bottom:2px;">Instagram DMs</div>
+                <div style="font-size:13px;font-weight:700;color:#c0392b;font-family:-apple-system,sans-serif;margin-bottom:2px;">14 Unread Messages</div>
+                <div style="font-size:12px;color:#3c3c43;font-family:-apple-system,sans-serif;line-height:1.4;">"Hey are you still taking clients?" · "How much for a full set?"</div>
+              </div>
+              <div style="font-size:10px;color:#8e8e93;font-family:-apple-system,sans-serif;flex-shrink:0;">2m</div>
+            </div>
+
+            <div style="margin:0 12px 8px;background:white;border-radius:14px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+              <div style="width:36px;height:36px;border-radius:8px;background:#fff8e1;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📅</div>
+              <div style="flex:1;">
+                <div style="font-size:10px;font-weight:600;color:#8e8e93;text-transform:uppercase;font-family:-apple-system,sans-serif;margin-bottom:2px;">Calendar</div>
+                <div style="font-size:13px;font-weight:700;color:#1c1c1e;font-family:-apple-system,sans-serif;margin-bottom:2px;">No-Show — 10:00 AM</div>
+                <div style="font-size:12px;color:#3c3c43;font-family:-apple-system,sans-serif;line-height:1.4;">Aaliyah M. never confirmed. Slot wasted.</div>
+              </div>
+              <div style="font-size:10px;color:#8e8e93;font-family:-apple-system,sans-serif;flex-shrink:0;">1h</div>
+            </div>
+
+            <div style="margin:0 12px 8px;background:white;border-radius:14px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+              <div style="width:36px;height:36px;border-radius:8px;background:#fff0f0;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">⚠️</div>
+              <div style="flex:1;">
+                <div style="font-size:10px;font-weight:600;color:#8e8e93;text-transform:uppercase;font-family:-apple-system,sans-serif;margin-bottom:2px;">Instagram DMs</div>
+                <div style="font-size:13px;font-weight:700;color:#c0392b;font-family:-apple-system,sans-serif;margin-bottom:2px;">Client went cold</div>
+                <div style="font-size:12px;color:#3c3c43;font-family:-apple-system,sans-serif;line-height:1.4;">"She asked about booking 3 days ago, never followed up"</div>
+              </div>
+              <div style="font-size:10px;color:#8e8e93;font-family:-apple-system,sans-serif;flex-shrink:0;">3h</div>
+            </div>
+
+            <div style="margin:0 12px 8px;background:white;border-radius:14px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+              <div style="width:36px;height:36px;border-radius:8px;background:#f0f4ff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">💬</div>
+              <div style="flex:1;">
+                <div style="font-size:10px;font-weight:600;color:#8e8e93;text-transform:uppercase;font-family:-apple-system,sans-serif;margin-bottom:2px;">Instagram DMs</div>
+                <div style="font-size:13px;font-weight:700;color:#1c1c1e;font-family:-apple-system,sans-serif;margin-bottom:2px;">Potential client lost</div>
+                <div style="font-size:12px;color:#3c3c43;font-family:-apple-system,sans-serif;line-height:1.4;">"Nvm, I found someone else. You never responded 😕"</div>
+              </div>
+              <div style="font-size:10px;color:#8e8e93;font-family:-apple-system,sans-serif;flex-shrink:0;">2d</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VS -->
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding-top:80px;gap:12px;">
+      <div style="width:1px;height:60px;background:linear-gradient(to bottom,transparent,#333);"></div>
+      <div style="width:44px;height:44px;border-radius:50%;border:1px solid #333;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#555;letter-spacing:1px;">VS</div>
+      <div style="width:1px;height:60px;background:linear-gradient(to bottom,#333,transparent);"></div>
+    </div>
+
+    <!-- AFTER PHONE -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:24px;">
+      <div style="font-size:0.58rem;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:#C8920A;">After</div>
+      <div style="width:280px;height:580px;background:#0d0d0d;border-radius:44px;border:2px solid #8a6e2f;box-shadow:0 0 0 1px #111,0 40px 80px rgba(201,168,76,0.15),inset 0 1px 0 rgba(201,168,76,0.1);position:relative;overflow:hidden;flex-shrink:0;">
+        <div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);width:90px;height:28px;background:#000;border-radius:20px;z-index:10;"></div>
+        <div style="position:absolute;top:0;left:0;right:0;height:52px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 24px 6px;z-index:9;font-size:10px;font-weight:600;color:#f5f0e8;">
+          <span style="font-size:12px;font-weight:700;">9:41</span>
+          <div style="display:flex;gap:4px;align-items:center;font-size:9px;"><span>●●●</span><span>WiFi</span><span>🔋</span></div>
+        </div>
+        <div style="position:absolute;top:52px;left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
+          <div style="background:linear-gradient(180deg,#0a0a0a 0%,#111 100%);min-height:100%;padding-bottom:20px;">
+            <div style="padding:16px 18px 12px;border-bottom:1px solid rgba(201,168,76,0.15);">
+              <div style="font-size:11px;color:#666;font-weight:300;letter-spacing:0.5px;margin-bottom:4px;">Good morning ✦</div>
+              <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:#f5f0e8;letter-spacing:0.5px;">Your <span style="color:#C8920A;">Studio</span></div>
+              <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);border-radius:20px;padding:3px 10px;font-size:9px;font-weight:600;color:#2ecc71;letter-spacing:1px;text-transform:uppercase;margin-top:6px;">
+                <div style="width:6px;height:6px;border-radius:50%;background:#2ecc71;animation:pulse 2s infinite;"></div> Nova is live
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 14px 0;">
+              <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.12);border-radius:14px;padding:12px;">
+                <div style="font-size:9px;color:#666;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:4px;">DMs Handled</div>
+                <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:#C8920A;line-height:1;">14</div>
+                <div style="font-size:9px;color:#555;margin-top:2px;">Since midnight</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.12);border-radius:14px;padding:12px;">
+                <div style="font-size:9px;color:#666;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:4px;">Booked Today</div>
+                <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:#C8920A;line-height:1;">3</div>
+                <div style="font-size:9px;color:#555;margin-top:2px;">Via Instagram</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.12);border-radius:14px;padding:12px;">
+                <div style="font-size:9px;color:#666;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:4px;">No-Shows</div>
+                <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:#2ecc71;line-height:1;">0</div>
+                <div style="font-size:9px;color:#555;margin-top:2px;">Reminders sent</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.12);border-radius:14px;padding:12px;">
+                <div style="font-size:9px;color:#666;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:4px;">Response Time</div>
+                <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:#C8920A;line-height:1;">47<span style="font-size:14px;">s</span></div>
+                <div style="font-size:9px;color:#555;margin-top:2px;">Avg this week</div>
+              </div>
+            </div>
+
+            <div style="padding:16px 14px 8px;font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#C8920A;">Nova Activity</div>
+
+            <div style="margin:0 14px 8px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:11px 13px;">
+              <div style="font-size:10px;color:#C8920A;font-weight:600;letter-spacing:0.5px;margin-bottom:4px;">✦ Nova replied · 2m ago</div>
+              <div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:7px 10px;font-size:11px;color:#aaa;font-style:italic;margin-bottom:6px;line-height:1.4;">"Hey! Do you have anything available this week for a full set? 👀"</div>
+              <div style="font-size:9px;color:#C8920A;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Nova sent</div>
+              <div style="background:rgba(201,168,76,0.1);border-radius:8px;padding:7px 10px;font-size:11px;color:#f5f0e8;line-height:1.4;">Hey babe! Yes we have openings this week 🖤 You can grab your spot here: [booking link] — slots fill fast so snag one now! ✨</div>
+            </div>
+
+            <div style="margin:0 14px 8px;background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.1);border-radius:12px;padding:11px 13px;display:flex;align-items:flex-start;gap:10px;">
+              <div style="width:7px;height:7px;border-radius:50%;background:#2ecc71;margin-top:4px;flex-shrink:0;"></div>
+              <div>
+                <div style="font-size:11px;color:#ccc;line-height:1.4;font-weight:300;"><strong style="color:#f5f0e8;font-weight:500;">Tiana B.</strong> booked + deposit collected automatically</div>
+                <div style="font-size:9px;color:#444;margin-top:2px;">18 min ago</div>
+              </div>
+            </div>
+
+            <div style="margin:0 14px 8px;background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.1);border-radius:12px;padding:11px 13px;display:flex;align-items:flex-start;gap:10px;">
+              <div style="width:7px;height:7px;border-radius:50%;background:#C8920A;margin-top:4px;flex-shrink:0;"></div>
+              <div>
+                <div style="font-size:11px;color:#ccc;line-height:1.4;font-weight:300;"><strong style="color:#f5f0e8;font-weight:500;">Follow-up sent</strong> to 3 leads who hadn't booked after 24 hrs</div>
+                <div style="font-size:9px;color:#444;margin-top:2px;">1 hour ago</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
 <section id="pricing" aria-labelledby="pricing-heading">
   <div class="section-wrap">
     <div class="section-label">Investment</div>
@@ -922,7 +1083,7 @@
           <li>Keyword triggers — client says "booking" or "price," your system takes over</li>
           <li>Lead capture sequences — new leads are saved automatically, nothing falls through</li>
           <li>Appointment confirmations — clients get automatic booking confirmations &amp; reminders</li>
-          <li>Follow-up sequences — no-shows and cold leads get followed up without you chasing them</li>
+          <li>Follow-up sequences — no-shows get followed up automatically, without you chasing them ✦<br><span style="font-size:0.6rem;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-top:4px;">✦ DM-based follow-up applies to clients who initially booked through Instagram. Clients who book via link in bio receive email follow-up only.</span></li>
           <li>Standard support — 48hr response</li>
         </ul>
       </article>
@@ -938,12 +1099,12 @@
           <li>Everything in Core, plus:</li>
           <span class="feat-plus">✦ Advanced Features</span>
           <li>Multi-platform messaging — IG, SMS &amp; Email via GoHighLevel</li>
-          <li>Missed call text-back — every missed call gets an instant follow-up text</li>
+          <li>Missed call text-back — every missed call gets an instant follow-up text ✦<br><span style="font-size:0.6rem;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-top:4px;">✦ Requires a dedicated business line provisioned through our platform. A new business number is included in your Growth setup — registration and monthly line fees are covered by WSA at no additional cost to you.</span></li>
           <li>Smart rebooking sequences — automatically nudges lapsed clients to rebook</li>
           <li>Re-engagement campaigns — win-back sequences for cold or inactive leads</li>
           <li>Review request automation — sends review requests after each appointment</li>
           <li>Birthday &amp; anniversary campaigns — automated personal touchpoints that drive repeat bookings</li>
-          <li>AI-powered chatbot — handles FAQs, style questions &amp; photo-based service suggestions</li>
+          <li>AI-powered chatbot — handles FAQs, style questions &amp; recommends services based on photos your clients send</li>
           <li>GoHighLevel CRM setup &amp; dashboard</li>
           <li>Priority support — 24hr response</li>
           <li>Monthly optimization &amp; improvements</li>
