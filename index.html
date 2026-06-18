@@ -69,8 +69,8 @@
         {"@type": "Question", "name": "Do I need to be tech savvy?", "acceptedAnswer": {"@type": "Answer", "text": "Not at all. We handle every technical aspect of the build — you just need to show up for the strategy call, share your brand voice, and give us access to your platforms."}},
         {"@type": "Question", "name": "What platforms do you work with?", "acceptedAnswer": {"@type": "Answer", "text": "We build on Instagram, Facebook, SMS, email, and website chat. For Growth clients, we also integrate GoHighLevel for full CRM and pipeline management."}},
         {"@type": "Question", "name": "What happens after the 3 months?", "acceptedAnswer": {"@type": "Answer", "text": "After your initial 3-month commitment, your plan rolls to month-to-month billing at the month-to-month rate, which is slightly higher than the contract rate to reflect the added flexibility. You're free to continue, upgrade, or cancel with 30 days written notice — no pressure, no penalties."}},
-        {"@type": "Question", "name": "Do I have to use a specific booking platform?", "acceptedAnswer": {"@type": "Answer", "text": "If you don't currently have a booking system, we set you up on one as part of your build — included in your setup at no extra cost. If you already use a booking platform, we'll work with what you have. We support Square, Acuity, and Vagaro."}},
-        {"@type": "Question", "name": "Will I have to pay for any other tools?", "acceptedAnswer": {"@type": "Answer", "text": "One third-party tool is required — ManyChat Pro at $39/month, billed directly to you. Everything else is covered by your WSA retainer."}},
+        {"@type": "Question", "name": "Do I have to use a specific booking platform?", "acceptedAnswer": {"@type": "Answer", "text": "If you don't currently have a booking system, we set you up on one as part of your build — included in your setup at no extra cost. If you already use a booking platform, we'll work with what you have. We support Square and Acuity."}},
+        {"@type": "Question", "name": "Will I have to pay for any other tools?", "acceptedAnswer": {"@type": "Answer", "text": "No. Everything — the AI, the automation, your booking system, and your CRM — is covered by your WSA retainer. No surprise costs, no separate logins to manage."}},
         {"@type": "Question", "name": "I have multiple staff members. Does that cost more?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Each additional service provider beyond the first is $150 per provider, added to your setup fee."}}
       ]
     }
@@ -111,25 +111,6 @@
     transition: top 0.2s;
   }
   .skip-nav:focus { top: 16px; }
-
-  .glow-tl {
-    position: fixed; top: -200px; left: -100px;
-    width: 900px; height: 600px;
-    background: radial-gradient(ellipse at top left, rgba(200,146,10,0.16) 0%, transparent 60%);
-    pointer-events: none; z-index: 0;
-  }
-  .glow-tr {
-    position: fixed; top: -200px; right: -100px;
-    width: 900px; height: 600px;
-    background: radial-gradient(ellipse at top right, rgba(200,146,10,0.12) 0%, transparent 60%);
-    pointer-events: none; z-index: 0;
-  }
-  .glow-br {
-    position: fixed; bottom: -300px; right: -300px;
-    width: 800px; height: 800px;
-    background: radial-gradient(circle, rgba(200,146,10,0.09) 0%, transparent 65%);
-    pointer-events: none; z-index: 0;
-  }
 
   /* NAV */
   header role="banner" { display: contents; }
@@ -690,9 +671,9 @@
 <!-- SKIP NAVIGATION — ADA FIX -->
 <a href="#main-content" class="skip-nav">Skip to main content</a>
 
-<div class="glow-tl" aria-hidden="true"></div>
-<div class="glow-tr" aria-hidden="true"></div>
-<div class="glow-br" aria-hidden="true"></div>
+<div class="glow-tl" aria-hidden="true" style="display:none"></div>
+<div class="glow-tr" aria-hidden="true" style="display:none"></div>
+<div class="glow-br" aria-hidden="true" style="display:none"></div>
 
 <!-- MOBILE MENU -->
 <div class="mobile-menu" id="mobileMenu" role="dialog" aria-label="Navigation menu">
@@ -749,11 +730,10 @@
   <div class="powered-inner">
     <span class="powered-label">Powered By</span>
     <div class="powered-badges">
-      <span class="powered-badge">ManyChat</span>
-      <span class="powered-badge">Zapier</span>
-      <span class="powered-badge">GoHighLevel</span>
+      <span class="powered-badge">AI-Powered Messaging</span>
+      <span class="powered-badge">Smart Booking &amp; CRM</span>
       <span class="powered-badge">Instagram Automation</span>
-      <span class="powered-badge">CRM Systems</span>
+      <span class="powered-badge">24/7 Lead Capture</span>
     </div>
   </div>
 </div>
@@ -1086,6 +1066,7 @@
           <li>Lead capture sequences — new leads are saved automatically, nothing falls through</li>
           <li>Appointment confirmations — clients get automatic booking confirmations &amp; reminders</li>
           <li>Follow-up sequences — no-shows get followed up automatically, without you chasing them ✦<br><span style="font-size:0.6rem;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-top:4px;">✦ DM-based follow-up applies to clients who initially booked through Instagram. Clients who book via link in bio receive email follow-up only.</span></li>
+          <li>Personalized dashboard — track your leads, bookings &amp; results in one place</li>
           <li>Standard support — 48hr response</li>
         </ul>
       </article>
@@ -1105,10 +1086,12 @@
           <li>Missed call text-back — every missed call gets an instant follow-up text ✦<br><span style="font-size:0.6rem;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-top:4px;">✦ Requires a dedicated business line provisioned through our platform. A new business number is included in your Growth setup — registration and monthly line fees are covered by WSA at no additional cost to you.</span></li>
           <li>Smart rebooking sequences — automatically nudges lapsed clients to rebook</li>
           <li>Re-engagement campaigns — win-back sequences for cold or inactive leads</li>
+          <li>Schedule-change alerts — if a provider calls out, every client booked that day is instantly notified and invited to rebook — no scrambling to text each one</li>
           <li>Review request automation — sends review requests after each appointment</li>
           <li>Birthday &amp; anniversary campaigns — automated personal touchpoints that drive repeat bookings</li>
           <li>AI-powered chatbot — handles FAQs, style questions &amp; recommends services based on photos your clients send</li>
-          <li>GoHighLevel CRM setup &amp; dashboard</li>
+          <li>Growth CRM — full GoHighLevel setup &amp; pipeline management</li>
+          <li>Personalized dashboard — track your leads, bookings &amp; results in one place</li>
           <li>Priority support — 24hr response</li>
           <li>Monthly optimization &amp; improvements</li>
         </ul>
@@ -1254,7 +1237,7 @@
           <span>Do I have to use a specific booking platform?</span>
           <span class="faq-icon" aria-hidden="true">+</span>
         </button>
-        <div class="faq-answer" role="region"><p>If you don't currently have a booking system, we set you up on one as part of your build — it's included in your setup and fully customized to match your brand. If you already use a booking platform, we'll work with what you have. We currently support Square, Acuity, and Vagaro. Don't see yours listed? Reach out — if it connects to Zapier, there's a good chance we can make it work.</p></div>
+        <div class="faq-answer" role="region"><p>If you don't currently have a booking system, we set you up on one as part of your build — it's included in your setup and fully customized to match your brand. If you already use a booking platform, we'll work with what you have. We currently support Square and Acuity. Don't see yours listed? Reach out — we'll check whether it integrates with our system.</p></div>
       </div>
       <div class="faq-item">
         <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
@@ -1268,7 +1251,7 @@
           <span>Will I have to pay for any other tools?</span>
           <span class="faq-icon" aria-hidden="true">+</span>
         </button>
-        <div class="faq-answer" role="region"><p>One third-party tool is required — ManyChat Pro at $39/month. This is your account, billed directly to you. Everything else — the AI, the automation, your booking system, and your CRM — is covered by your WSA retainer.</p></div>
+        <div class="faq-answer" role="region"><p>No. Everything — the AI, the automation, your booking system, and your CRM — is covered by your WSA retainer. No surprise costs, no separate logins to manage.</p></div>
       </div>
       <div class="faq-item">
         <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
@@ -1289,7 +1272,7 @@
           <span>What booking platforms do you support?</span>
           <span class="faq-icon" aria-hidden="true">+</span>
         </button>
-        <div class="faq-answer" role="region"><p>We currently support Square Appointments, Acuity Scheduling, and Vagaro for clients with existing platforms. A note on plan requirements — Acuity requires the Standard plan or higher, and Vagaro requires their $10/month webhook add-on for the integration to function. Don't see your platform listed? Reach out — if it connects to Zapier, we'll look into it.</p></div>
+        <div class="faq-answer" role="region"><p>We currently support Square Appointments and Acuity Scheduling for clients with existing platforms. A note on plan requirements — Acuity requires the Standard plan or higher for the integration to function. Don't see your platform listed? Reach out — we'll check whether it integrates with our system.</p></div>
       </div>
     </div>
   </div>
