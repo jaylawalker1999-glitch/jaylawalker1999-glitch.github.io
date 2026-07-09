@@ -241,30 +241,6 @@
   }
 
 
-  /* AMBIENT GOLD ORBS — full page */
-  .orb {
-    position: fixed; border-radius: 50%;
-    pointer-events: none; z-index: -1;
-    background: radial-gradient(circle at center, rgba(200,146,10,0.16) 0%, rgba(200,146,10,0.05) 42%, transparent 70%);
-    will-change: transform;
-  }
-  .orb-1 { width: 640px; height: 640px; top: -220px; left: -180px; animation: orb-drift-a 26s ease-in-out infinite alternate; }
-  .orb-2 { width: 500px; height: 500px; top: -160px; right: -140px; animation: orb-drift-b 22s ease-in-out infinite alternate; background: radial-gradient(circle at center, rgba(232,184,48,0.12) 0%, rgba(200,146,10,0.04) 42%, transparent 70%); }
-  .orb-3 { width: 560px; height: 560px; top: 36%; right: -240px; animation: orb-drift-a 30s ease-in-out infinite alternate-reverse; }
-  .orb-4 { width: 620px; height: 620px; bottom: 6%; left: -260px; animation: orb-drift-b 28s ease-in-out infinite alternate; }
-  .orb-5 { width: 460px; height: 460px; bottom: -200px; right: 18%; animation: orb-drift-a 24s ease-in-out infinite alternate-reverse; background: radial-gradient(circle at center, rgba(232,184,48,0.10) 0%, rgba(200,146,10,0.04) 42%, transparent 70%); }
-  @keyframes orb-drift-a {
-    from { transform: translate(0, 0) scale(1); }
-    to   { transform: translate(50px, 34px) scale(1.1); }
-  }
-  @keyframes orb-drift-b {
-    from { transform: translate(0, 0) scale(1.06); }
-    to   { transform: translate(-44px, 40px) scale(1); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .orb { animation: none; }
-  }
-
   /* SECTION BASE */
   section { position: relative; z-index: 1; }
   .section-wrap { max-width: 1100px; margin: 0 auto; padding: 100px 60px; }
@@ -295,7 +271,7 @@
   }
 
   /* MISSION BANNER */
-  #mission { background: rgba(255,255,255,0.02); }
+  #mission { background: transparent; }
   .mission-inner {
     max-width: 800px; margin: 0 auto;
     padding: 80px 60px; text-align: center;
@@ -340,7 +316,7 @@
   }
 
   /* HOW IT WORKS */
-  #how { background: rgba(255,255,255,0.02); }
+  #how { background: transparent; }
   .steps-grid {
     display: grid; grid-template-columns: repeat(4, 1fr);
     gap: 24px; margin-top: 50px;
@@ -422,7 +398,7 @@
   .about-copy p:last-child { margin-bottom: 0; color: rgba(255,255,255,0.85); }
 
   /* PRICING */
-  #pricing { background: rgba(255,255,255,0.02); }
+  #pricing { background: transparent; }
   .plans-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 50px; }
   .plan-card {
     background: var(--card-bg); border: 1px solid rgba(200,146,10,0.25);
@@ -474,7 +450,7 @@
   .sa-note { font-size: 0.58rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.4); }
 
   /* FAQ */
-  #faq { background: rgba(255,255,255,0.02); }
+  #faq { background: transparent; }
   .faq-list { margin-top: 50px; display: flex; flex-direction: column; gap: 2px; }
   .faq-item { border: 1px solid rgba(200,146,10,0.15); }
   .faq-item.open { border-color: rgba(200,146,10,0.35); }
@@ -518,7 +494,7 @@
   .book-btn:hover { background: linear-gradient(135deg, rgba(200,146,10,0.28), rgba(200,146,10,0.12)); }
 
   /* CONTACT SECTION */
-  #contact { background: rgba(255,255,255,0.02); }
+  #contact { background: transparent; }
   .contact-inner { max-width: 600px; margin: 0 auto; text-align: center; }
   .contact-inner p { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; color: rgba(255,255,255,0.7); line-height: 1.8; margin-bottom: 28px; }
   .contact-links { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; }
@@ -547,7 +523,7 @@
   .footer-service { font-size: 0.55rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-top: 8px; }
 
   /* PARTICLES */
-  #hero-canvas { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+  #hero-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
 
   /* SHIMMER */
   @keyframes shimmer-sweep {
@@ -581,7 +557,7 @@
   .step-card:hover { transform: translateY(-4px); box-shadow: 0 10px 32px rgba(200,146,10,0.1); }
 
   /* CALCULATOR */
-  #calculator { background: rgba(255,255,255,0.02); }
+  #calculator { background: transparent; }
   .calc-wrap { max-width: 780px; margin: 0 auto; padding: 100px 60px; }
   .calc-inner {
     background: var(--card-bg); border: 1px solid rgba(200,146,10,0.3);
@@ -683,11 +659,6 @@
     .calc-fields { grid-template-columns: 1fr; }
     .results-grid { grid-template-columns: 1fr; }
 
-    .orb-1 { width: 380px; height: 380px; top: -140px; left: -120px; }
-    .orb-2 { width: 320px; height: 320px; top: -100px; right: -110px; }
-    .orb-3 { width: 340px; height: 340px; right: -160px; }
-    .orb-4 { width: 360px; height: 360px; left: -160px; }
-    .orb-5 { display: none; }
   }
 
   @media (max-width: 600px) {
@@ -703,11 +674,7 @@
 <!-- SKIP NAVIGATION — ADA FIX -->
 <a href="#main-content" class="skip-nav">Skip to main content</a>
 
-<div class="orb orb-1" aria-hidden="true"></div>
-<div class="orb orb-2" aria-hidden="true"></div>
-<div class="orb orb-3" aria-hidden="true"></div>
-<div class="orb orb-4" aria-hidden="true"></div>
-<div class="orb orb-5" aria-hidden="true"></div>
+<canvas id="hero-canvas" aria-hidden="true"></canvas>
 
 <!-- MOBILE MENU -->
 <div class="mobile-menu" id="mobileMenu" role="dialog" aria-label="Navigation menu">
@@ -749,7 +716,6 @@
 
 <!-- HERO -->
 <section id="hero" aria-labelledby="hero-heading">
-  <canvas id="hero-canvas" aria-hidden="true"></canvas>
   <div class="hero-inner">
     <p class="hero-eyebrow">Walker Systems &amp; Automation <span>✦</span> Serving Service-Based Businesses Nationwide</p>
     <h1 id="hero-heading" class="hero-headline">Your Business Runs.<br><em>You Rest.</em></h1>
@@ -1407,28 +1373,20 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeMobile();
 });
 
-// ── GOLD PARTICLES ───────────────────────────────────
+// ── GOLD PARTICLES — FULL PAGE ───────────────────────
 (function() {
   const canvas = document.getElementById('hero-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let particles = [];
-  const COUNT = 55;
-
-  function resize() {
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-    particles = [];
-    for (let i = 0; i < COUNT; i++) particles.push(createParticle());
-  }
-  window.addEventListener('resize', resize);
 
   function rand(min, max) { return Math.random() * (max - min) + min; }
 
   function createParticle() {
     return {
       x: rand(0, canvas.width),
-      y: rand(canvas.height * 0.2, canvas.height),
+      y: rand(0, canvas.height),
       size: rand(0.8, 2.2),
       speedY: rand(0.15, 0.45),
       speedX: rand(-0.1, 0.1),
@@ -1437,17 +1395,31 @@ document.addEventListener('keydown', function(e) {
     };
   }
 
-  resize();
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    // scale particle count with viewport area (~55 on a laptop, ~30 on a phone)
+    const count = Math.max(28, Math.min(90, Math.round(canvas.width * canvas.height / 22000)));
+    particles = [];
+    for (let i = 0; i < count; i++) particles.push(createParticle());
+    if (reducedMotion) drawFrame();
+  }
+  window.addEventListener('resize', resize);
 
-  function draw() {
+  function drawFrame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     particles.forEach(p => {
-      p.pulse += 0.012;
       const alpha = p.opacity * (0.7 + 0.3 * Math.sin(p.pulse));
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(200,146,10,${alpha})`;
       ctx.fill();
+    });
+  }
+
+  function tick() {
+    particles.forEach(p => {
+      p.pulse += 0.012;
       p.y -= p.speedY;
       p.x += p.speedX;
       if (p.y < -10) {
@@ -1455,9 +1427,12 @@ document.addEventListener('keydown', function(e) {
         p.x = rand(0, canvas.width);
       }
     });
-    requestAnimationFrame(draw);
+    drawFrame();
+    requestAnimationFrame(tick);
   }
-  draw();
+
+  resize();
+  if (!reducedMotion) tick();
 })();
 
 // ── SCROLL REVEAL ─────────────────────────────────────
