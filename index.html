@@ -340,6 +340,62 @@
   }
   .step-desc { font-size: 0.72rem; color: rgba(255,255,255,0.68); line-height: 1.7; }
 
+  /* WRAYA INTRO */
+  #wraya { background: transparent; }
+  .wraya-wrap { max-width: 920px; margin: 0 auto; padding: 90px 60px; }
+  .wraya-card {
+    position: relative; overflow: hidden;
+    border: 1px solid rgba(200,146,10,0.32);
+    background: linear-gradient(145deg, rgba(200,146,10,0.055), rgba(8,8,8,0.96) 48%, rgba(200,146,10,0.025));
+    padding: 48px 50px;
+    text-align: center;
+  }
+  .wraya-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold), var(--gold-light), var(--gold), transparent);
+  }
+  .wraya-eyebrow {
+    font-size: 0.58rem; letter-spacing: 5px; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 12px;
+  }
+  .wraya-name {
+    font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 700;
+    color: #fff; line-height: 1; margin-bottom: 8px;
+  }
+  .wraya-pronunciation {
+    font-size: 0.56rem; letter-spacing: 3px; text-transform: uppercase;
+    color: rgba(255,255,255,0.42); margin-bottom: 22px;
+  }
+  .wraya-role {
+    font-family: 'Cormorant Garamond', serif; font-size: 1.35rem;
+    color: var(--gold-light); font-style: italic; margin-bottom: 22px;
+  }
+  .wraya-copy {
+    max-width: 720px; margin: 0 auto;
+    font-family: 'Cormorant Garamond', serif; font-size: 1.08rem;
+    color: rgba(255,255,255,0.72); line-height: 1.9;
+  }
+  .wraya-copy p + p { margin-top: 14px; }
+  .wraya-roles {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    margin-top: 30px; text-align: left;
+  }
+  .wraya-role-card {
+    border: 1px solid rgba(200,146,10,0.18);
+    background: rgba(200,146,10,0.025); padding: 18px 20px;
+  }
+  .wraya-role-card span {
+    display: block; font-size: 0.53rem; letter-spacing: 3px;
+    text-transform: uppercase; color: rgba(255,255,255,0.42); margin-bottom: 6px;
+  }
+  .wraya-role-card strong {
+    display: block; font-family: 'Playfair Display', serif;
+    font-size: 1rem; color: var(--gold-light); margin-bottom: 5px;
+  }
+  .wraya-role-card p {
+    font-size: 0.69rem; color: rgba(255,255,255,0.62); line-height: 1.6;
+  }
+
   /* ABOUT ME */
   #about { background: transparent; }
   .about-grid {
@@ -424,8 +480,48 @@
     display: flex; gap: 10px; align-items: flex-start; line-height: 1.5;
   }
   .feat-list li::before { content: '◆'; color: var(--gold); font-size: 0.45rem; margin-top: 5px; flex-shrink: 0; }
-  .feat-plus { font-size: 0.55rem; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); margin: 10px 0 4px; display: block; }
-  .feat-plus::before { display: none !important; }
+  .feat-content { min-width: 0; display: block; flex: 1; }
+  .feat-note {
+    display: block; margin-top: 6px;
+    font-size: 0.6rem; line-height: 1.65; letter-spacing: 1px;
+    color: rgba(255,255,255,0.48);
+  }
+  .feat-list li.memory-callout {
+    display: block; padding: 12px 14px; margin: 6px 0 8px;
+    background: rgba(232,184,48,0.06);
+    border: 1px solid rgba(201,168,76,0.18);
+    border-radius: 10px;
+  }
+  .feat-list li.memory-callout::before { display: none; }
+  .memory-label {
+    font-size: 0.6rem; letter-spacing: 1.5px; text-transform: uppercase;
+    color: rgba(255,255,255,0.45); margin-bottom: 6px;
+  }
+  .memory-quote {
+    font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 0.95rem; color: var(--gold); line-height: 1.5;
+  }
+  .feat-list li.feat-plus {
+    display: block; padding: 8px 0 4px; margin: 2px 0 0;
+    font-size: 0.55rem; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--gold); line-height: 1.4;
+  }
+  .feat-list li.feat-plus::before { display: none !important; }
+  .best-value-ribbon {
+    position: absolute; top: 20px; right: -38px; width: 154px;
+    transform: rotate(45deg); transform-origin: center;
+    background: var(--gold); color: #1a1a1a;
+    font-size: 0.55rem; line-height: 1; letter-spacing: 2px;
+    text-transform: uppercase; font-weight: 600;
+    padding: 7px 0; text-align: center;
+    font-family: 'Montserrat', sans-serif;
+    white-space: nowrap; z-index: 3;
+  }
+  /* iOS/Safari may auto-link times such as “2am”; keep those links visually neutral. */
+  a[x-apple-data-detectors] {
+    color: inherit !important; text-decoration: none !important;
+    font: inherit !important; letter-spacing: inherit !important;
+  }
   .setup-row {
     display: flex; align-items: center; justify-content: center;
     gap: 20px; margin-top: 24px; padding: 20px;
@@ -634,6 +730,10 @@
     .powered-bar { padding: 18px 24px; }
 
     .section-wrap { padding: 70px 24px; }
+    .wraya-wrap { padding: 70px 24px; }
+    .wraya-card { padding: 36px 26px; }
+    .wraya-name { font-size: 2.4rem; }
+    .wraya-roles { grid-template-columns: 1fr; }
     .mission-inner { padding: 60px 24px; }
     .mission-quote { font-size: 1.2rem; }
 
@@ -865,6 +965,36 @@
 
 <div class="section-divider">✦ — ✦</div>
 
+<!-- WRAYA INTRO -->
+<section id="wraya" aria-labelledby="wraya-heading">
+  <div class="wraya-wrap">
+    <div class="wraya-card reveal">
+      <div class="wraya-eyebrow">Meet the Intelligence Behind Your System</div>
+      <h2 id="wraya-heading" class="wraya-name">Wraya</h2>
+      <p class="wraya-pronunciation">Pronounced “Raya”</p>
+      <p class="wraya-role">Your AI Client Operations Partner</p>
+      <div class="wraya-copy">
+        <p>Wraya is WSA’s AI client-operations system — built to handle the conversations and follow-up work that usually gets pushed to the bottom of your list.</p>
+        <p>She responds to inquiries, guides clients toward the right next step, captures leads, follows up, supports booking, and keeps conversations moving while you focus on running your business.</p>
+      </div>
+      <div class="wraya-roles" aria-label="How Wraya works in each WSA plan">
+        <div class="wraya-role-card">
+          <span>Core</span>
+          <strong>Wraya as Your AI Assistant</strong>
+          <p>Handles the everyday client communication and lead-response work that keeps your front end moving.</p>
+        </div>
+        <div class="wraya-role-card">
+          <span>Growth</span>
+          <strong>Wraya as Your AI Employee</strong>
+          <p>Takes on a broader front-office role across channels, follow-up, re-engagement, CRM, and client operations.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider">✦ — ✦</div>
+
 <!-- ABOUT -->
 <section id="about" aria-labelledby="about-heading">
   <div class="section-wrap">
@@ -896,7 +1026,7 @@
   <div class="section-wrap" style="max-width:1100px;">
     <div class="section-label">See It In Action</div>
     <h2 id="demo-heading" class="section-title">Your Studio.<br><em>Without the Chaos.</em></h2>
-    <p style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:rgba(255,255,255,0.65);line-height:1.8;max-width:580px;margin-bottom:60px;">See what changes when Nova handles every DM, follow-up, and booking — automatically.</p>
+    <p style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:rgba(255,255,255,0.65);line-height:1.8;max-width:580px;margin-bottom:60px;">See what changes when Wraya handles every DM, follow-up, and booking — automatically.</p>
   </div>
 
   <div style="display:flex;justify-content:center;align-items:flex-start;gap:48px;padding:0 24px 100px;flex-wrap:wrap;">
@@ -982,7 +1112,7 @@
               <div style="font-size:11px;color:#666;font-weight:300;letter-spacing:0.5px;margin-bottom:4px;">Good morning ✦</div>
               <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:#f5f0e8;letter-spacing:0.5px;">Your <span style="color:#C8920A;">Studio</span></div>
               <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);border-radius:20px;padding:3px 10px;font-size:9px;font-weight:600;color:#2ecc71;letter-spacing:1px;text-transform:uppercase;margin-top:6px;">
-                <div style="width:6px;height:6px;border-radius:50%;background:#2ecc71;animation:pulse 2s infinite;"></div> Nova is live
+                <div style="width:6px;height:6px;border-radius:50%;background:#2ecc71;animation:pulse 2s infinite;"></div> Wraya is live
               </div>
             </div>
 
@@ -1009,12 +1139,12 @@
               </div>
             </div>
 
-            <div style="padding:16px 14px 8px;font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#C8920A;">Nova Activity</div>
+            <div style="padding:16px 14px 8px;font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#C8920A;">Wraya Activity</div>
 
             <div style="margin:0 14px 8px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:11px 13px;">
-              <div style="font-size:10px;color:#C8920A;font-weight:600;letter-spacing:0.5px;margin-bottom:4px;">✦ Nova replied · 2m ago</div>
+              <div style="font-size:10px;color:#C8920A;font-weight:600;letter-spacing:0.5px;margin-bottom:4px;">✦ Wraya replied · 2m ago</div>
               <div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:7px 10px;font-size:11px;color:#aaa;font-style:italic;margin-bottom:6px;line-height:1.4;">"Hey! Do you have anything available this week for a full set? 👀"</div>
-              <div style="font-size:9px;color:#C8920A;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Nova sent</div>
+              <div style="font-size:9px;color:#C8920A;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Wraya sent</div>
               <div style="background:rgba(201,168,76,0.1);border-radius:8px;padding:7px 10px;font-size:11px;color:#f5f0e8;line-height:1.4;">Hey babe! Yes we have openings this week 🖤 You can grab your spot here: [booking link] — slots fill fast so snag one now! ✨</div>
             </div>
 
@@ -1046,36 +1176,37 @@
 <section id="pricing" aria-labelledby="pricing-heading">
   <div class="section-wrap">
     <div class="section-label">Investment</div>
-    <h2 id="pricing-heading" class="section-title">Choose Your Level of <em>Automation</em></h2>
-    <p style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:rgba(255,255,255,0.78);line-height:1.8;max-width:560px;margin:0 auto 48px;text-align:center;">We believe knowing your investment before you ever book a call is a form of respect.</p>
+    <h2 id="pricing-heading" class="section-title">Choose Wraya's <em>Role</em> in Your Business</h2>
+    <p style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:rgba(255,255,255,0.78);line-height:1.8;max-width:640px;margin:0 0 48px;text-align:left;">We believe knowing your investment before you ever book a call is a form of respect.</p>
     <div class="plans-row">
       <article class="plan-card reveal">
-        <div class="plan-badge">Core System</div>
+        <div class="plan-badge">Wraya as Your AI Assistant</div>
         <div class="plan-name">Core</div>
-        <div class="plan-tagline">For anyone tired of missed leads and ready to run a more professional business without the extra hours</div>
+        <div class="plan-tagline">Wraya handles the DMs, the leads, and the bookings — for anyone tired of missed messages and ready to run a more professional business without the extra hours</div>
         <div class="price-block">
           <div class="price-row"><span class="price-lbl">3-Mo Contract</span><span class="price-amt">$997</span><span class="price-per">/mo</span></div>
           <div class="price-row"><span class="price-lbl">Month-to-Month</span><span class="price-mtm">$1,197</span><span class="price-per">/mo</span></div>
           <div style="font-size:0.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-top:8px;font-family:'Montserrat',sans-serif;font-weight:500;">Current Rate</div>
         </div>
         <ul class="feat-list" aria-label="Core plan features">
-          <li>Instagram DM automation — auto-replies to every DM, even at 2am</li>
+          <li><span class="feat-content">Instagram DM automation — auto-replies to every DM, even at&nbsp;2am</span></li>
           <li>Comment-to-DM flows — someone comments on your post, they get a DM instantly</li>
           <li>Story reply automation — every story reply gets a response without you touching your phone</li>
           <li>Keyword triggers — client says "booking" or "price," your system takes over</li>
           <li>Lead capture sequences — new leads are saved automatically, nothing falls through</li>
-          <li>Photo analysis — a client sends an inspo pic, Nova identifies the service, quotes it, and books it</li>
-          <li>Books the appointment — Nova gets them on your calendar without you touching your phone ✦<br><span style="font-size:0.6rem;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-top:4px;">✦ Direct calendar booking is available on GoHighLevel, Acuity &amp; Square. On other booking platforms, Nova sends clients straight to the right service page instead of a general link.</span></li>
-          <li>Booking recovery — Nova checks back with anyone who asked about booking but didn't finish</li>
-          <li>Conversation memory — Nova follows the whole thread, so nobody repeats themselves and nothing gets dropped halfway through</li>
+          <li>Photo analysis — a client sends an inspo pic, Wraya identifies the service, quotes it, and books it</li>
+          <li><span class="feat-content">Books the appointment — Wraya gets them on your calendar without you touching your phone ✦<span class="feat-note">✦ Direct calendar booking is available on GoHighLevel, Acuity &amp; Square. On other booking platforms, Wraya sends clients straight to the right service page instead of a general link.</span></span></li>
+          <li>Booking recovery — Wraya checks back with anyone who asked about booking but didn't finish</li>
+          <li>Conversation memory — Wraya follows the whole thread, so nobody repeats themselves and nothing gets dropped halfway through</li>
           <li>Personalized dashboard — track your leads, bookings &amp; results in one place</li>
           <li>Standard support — 48hr response</li>
         </ul>
       </article>
       <article class="plan-card featured reveal reveal-delay-1">
-        <div class="plan-badge">Most Popular</div>
+        <div class="best-value-ribbon">Best Value</div>
+        <div class="plan-badge">Wraya as Your AI Employee</div>
         <div class="plan-name">Growth</div>
-        <div class="plan-tagline">For anyone whose ambition has outgrown their current setup and is ready for a backend built to scale</div>
+        <div class="plan-tagline">Same Wraya, full front office — for anyone whose ambition has outgrown their current setup and is ready to hand over a backend built to scale</div>
         <div class="price-block">
           <div class="price-row"><span class="price-lbl">3-Mo Contract</span><span class="price-amt">$1,497</span><span class="price-per">/mo</span></div>
           <div class="price-row"><span class="price-lbl">Month-to-Month</span><span class="price-mtm">$1,797</span><span class="price-per">/mo</span></div>
@@ -1083,15 +1214,19 @@
         </div>
         <ul class="feat-list" aria-label="Growth plan features">
           <li>Everything in Core, plus:</li>
-          <span class="feat-plus">✦ Advanced Features</span>
+          <li class="feat-plus">✦ Advanced Features</li>
           <li>Multi-platform messaging — IG, SMS &amp; Email via GoHighLevel</li>
-          <li>Missed call text-back — every missed call gets an instant follow-up text ✦<br><span style="font-size:0.6rem;color:rgba(255,255,255,0.4);letter-spacing:1px;display:block;margin-top:4px;">✦ Requires a dedicated business line provisioned through our platform. A new business number is included in your Growth setup — registration and monthly line fees are covered by WSA at no additional cost to you.</span></li>
+          <li><span class="feat-content">Missed call text-back — every missed call gets an instant follow-up text ✦<span class="feat-note">✦ Requires a dedicated business line provisioned through our platform. A new business number is included in your Growth setup — registration and monthly line fees are covered by WSA at no additional cost to you.</span></span></li>
           <li>Smart rebooking sequences — automatically nudges lapsed clients to rebook</li>
           <li>Re-engagement campaigns — win-back sequences for cold or inactive leads</li>
           <li>Schedule-change alerts — if a provider calls out, every client booked that day is instantly notified and invited to rebook — no scrambling to text each one</li>
           <li>Review request automation — sends review requests after each appointment</li>
           <li>Birthday &amp; anniversary campaigns — automated personal touchpoints that drive repeat bookings</li>
-          <li>Client memory — Nova remembers each client across every conversation: what they booked, what they asked about, what they passed on</li>
+          <li>Client memory — Wraya remembers each client across every conversation: what they booked, what they asked about, what they passed on</li>
+          <li class="memory-callout">
+            <div class="memory-label">In a real DM</div>
+            <div class="memory-quote">"Booking you with Jess again since that's who you've seen the last 3 times."</div>
+          </li>
           <li>AI-powered chatbot — handles FAQs &amp; style questions, then flags anything it can't answer straight to you with the full conversation so nothing slips</li>
           <li>Growth CRM — full GoHighLevel setup &amp; pipeline management</li>
           <li>Personalized dashboard — track your leads, bookings &amp; results in one place</li>
