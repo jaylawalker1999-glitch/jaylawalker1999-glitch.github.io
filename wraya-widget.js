@@ -8,6 +8,7 @@
   const CHAT_ENDPOINT = (script.dataset.chatEndpoint || 'https://xdsblwbujxizqipgsaik.supabase.co/functions/v1/wsa-wraya-web-chat').trim();
   const HISTORY_ENDPOINT = (script.dataset.historyEndpoint || 'https://xdsblwbujxizqipgsaik.supabase.co/functions/v1/wsa-wraya-web-chat-history').trim();
   const LEAD_ENDPOINT = (script.dataset.leadEndpoint || 'https://xdsblwbujxizqipgsaik.supabase.co/functions/v1/wsa-wraya-web-lead').trim();
+  const IDENTITY_ENDPOINT = (script.dataset.identityEndpoint || 'https://xdsblwbujxizqipgsaik.supabase.co/functions/v1/wsa-wraya-web-identity').trim();
   const STORAGE_PREFIX = 'wsa_wraya_web_v1';
 
   if (!SITE_KEY) {
@@ -55,6 +56,10 @@
       this.leadSubmitted = false;
       this.pending = false;
       this.isOpen = false;
+      this.identityRecognitionEnabled = false;
+      this.photoUploadEnabled = false;
+      this.selectedImage = null;
+      this.maxImageBytes = 6 * 1024 * 1024;
       this.maxInputChars = 4000;
       this.fallbackMessage = 'I’m having trouble answering right now. Please try again shortly.';
       this.handleDocumentKeydown = this.handleDocumentKeydown.bind(this);
@@ -90,6 +95,9 @@
         this.config = payload.site;
         this.maxInputChars = Number(payload.site.max_input_chars) || 4000;
         this.fallbackMessage = payload.site.copy_config?.fallback_message || this.fallbackMessage;
+        this.identityRecognitionEnabled = payload.site.copy_config?.identity_recognition_enabled === true;
+        this.photoUploadEnabled = payload.site.photo_upload?.enabled === true;
+        this.maxImageBytes = Number(payload.site.photo_upload?.max_bytes) || this.maxImageBytes;
         this.applyConfig();
         await this.loadCompliance();
         await this.loadHistory();
@@ -160,6 +168,7 @@
         if (!payload?.ok || !Array.isArray(payload.messages)) return;
         this.sessionId = payload.session_id || null;
         if (this.sessionId) this.leadSubmitted = safeLocalStorage.get(`${STORAGE_PREFIX}:${SITE_KEY}:lead:${this.sessionId}`) === '1';
+        this.updateRecognitionVisibility();
 
         this.messages = payload.messages
           .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.message_text === 'string')
@@ -196,7 +205,11 @@
       this.shadowRoot.querySelector('textarea').setAttribute('aria-label', `Message ${assistantName}`);
 
       const businessName = this.config.business_name || 'this business';
+      const roleLabelRaw = typeof copy.role_label === 'string' ? copy.role_label.trim() : '';
+      const roleLabel = roleLabelRaw ? roleLabelRaw.slice(0, 80) : 'AI assistant';
       this.shadowRoot.querySelector('[data-business-name]').textContent = businessName;
+      this.shadowRoot.querySelector('[data-role-label]').textContent = roleLabel;
+      this.shadowRoot.querySelector('.launcher-sub').textContent = roleLabel;
 
       this.shadowRoot.querySelector('.launcher-title').textContent = `Ask ${assistantName}`;
       this.shadowRoot.querySelector('.launcher-mark').textContent = assistantInitial;
@@ -210,6 +223,8 @@
 
       const position = String(this.config.launcher_position || 'bottom_right');
       this.classList.toggle('wraya-left', position === 'bottom_left');
+      if (this.attachButton) this.attachButton.hidden = !this.photoUploadEnabled;
+      this.updateRecognitionVisibility();
     }
 
     safeColor(value, fallback) {
@@ -358,6 +373,9 @@
             line-height: 1.55;
           }
           .intro strong { color: var(--wraya-accent); font-weight: 600; }
+          .identity-bar { display: flex; align-items: center; justify-content: flex-end; margin: -7px 2px 12px; }
+          .recognize-btn { border: 0; background: transparent; color: rgba(232,184,48,.82); font-size: 9px; padding: 4px 2px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+          .recognize-btn:hover { color: var(--wraya-accent); }
           .message-row { display: flex; margin: 9px 0; }
           .message-row.user { justify-content: flex-end; }
           .bubble {
@@ -398,7 +416,7 @@
           }
           .input-wrap {
             display: grid;
-            grid-template-columns: 1fr auto;
+            grid-template-columns: auto 1fr auto;
             gap: 8px;
             align-items: end;
             padding: 7px 7px 7px 12px;
@@ -416,6 +434,13 @@
           }
           textarea::placeholder { color: rgba(255,255,255,.34); }
           textarea:disabled { opacity: .55; }
+          .attach { width: 34px; height: 38px; border: 0; border-radius: 10px; background: transparent; color: rgba(255,255,255,.62); cursor: pointer; font-size: 17px; display: grid; place-items: center; }
+          .attach:hover:not(:disabled) { background: rgba(255,255,255,.05); color: var(--wraya-accent); }
+          .attach:disabled { opacity: .35; cursor: default; }
+          .image-chip { display: flex; align-items: center; gap: 8px; margin: 0 2px 8px; padding: 8px 10px; border: 1px solid rgba(232,184,48,.18); border-radius: 11px; background: rgba(200,146,10,.06); color: rgba(255,255,255,.72); font-size: 9px; }
+          .image-chip-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .image-remove { width: 24px; height: 24px; border: 0; border-radius: 50%; background: rgba(255,255,255,.05); color: rgba(255,255,255,.68); cursor: pointer; }
+          .composer-status { min-height: 12px; margin-top: 5px; text-align: center; color: rgba(255,255,255,.55); font-size: 8.5px; line-height: 1.35; }
           .send {
             width: 38px; height: 38px; border: 1px solid rgba(232,184,48,.4); border-radius: 12px;
             display: grid; place-items: center;
@@ -492,13 +517,14 @@
             <div class="avatar" aria-hidden="true">W</div>
             <div class="header-copy">
               <div class="header-name">Wraya</div>
-              <div class="header-sub"><i aria-hidden="true"></i><span>AI assistant for <span data-business-name>this business</span></span></div>
+              <div class="header-sub"><i aria-hidden="true"></i><span><span data-role-label>AI assistant</span> for <span data-business-name>this business</span></span></div>
             </div>
             <button class="close" type="button" aria-label="Close Wraya chat">×</button>
           </header>
 
           <div class="messages" aria-live="polite" aria-relevant="additions">
             <div class="intro"><strong>Wraya</strong> can answer questions, explain services, and help you find the right next step.</div>
+            <div class="identity-bar" hidden><button class="recognize-btn" type="button">Already chatted with us? Recognize me</button></div>
             <div class="message-row assistant welcome-row">
               <div class="bubble" data-welcome>Hi — I’m Wraya. What can I help you with?</div>
             </div>
@@ -510,10 +536,14 @@
           </div>
 
           <form class="composer" novalidate>
+            <div class="image-chip" hidden><span aria-hidden="true">📷</span><span class="image-chip-name"></span><button class="image-remove" type="button" aria-label="Remove attached photo">×</button></div>
             <div class="input-wrap">
+              <button class="attach" type="button" aria-label="Attach a photo" title="Attach a photo" hidden>📎</button>
+              <input class="file-input" type="file" accept="image/jpeg,image/png,image/webp" hidden>
               <textarea rows="1" aria-label="Message Wraya" placeholder="Ask Wraya anything…"></textarea>
               <button class="send" type="submit" aria-label="Send message">➤</button>
             </div>
+            <div class="composer-status" aria-live="polite"></div>
             <div class="fineprint">AI can make mistakes. Confirm important details before acting.</div>
             <div class="legal-line"><span data-legal-notice>Do not send payment card numbers, passwords, API keys, or other highly sensitive information in chat.</span> <a data-privacy-link href="#" target="_blank" rel="noopener noreferrer" hidden>Privacy</a><span> · </span><a data-terms-link href="#" target="_blank" rel="noopener noreferrer" hidden>Terms</a></div>
           </form>
@@ -531,6 +561,14 @@
       this.typingRow = this.shadowRoot.querySelector('.typing-row');
       this.messagesScroller = this.shadowRoot.querySelector('.messages');
       this.welcomeRow = this.shadowRoot.querySelector('.welcome-row');
+      this.attachButton = this.shadowRoot.querySelector('.attach');
+      this.fileInput = this.shadowRoot.querySelector('.file-input');
+      this.imageChip = this.shadowRoot.querySelector('.image-chip');
+      this.imageChipName = this.shadowRoot.querySelector('.image-chip-name');
+      this.imageRemoveButton = this.shadowRoot.querySelector('.image-remove');
+      this.composerStatus = this.shadowRoot.querySelector('.composer-status');
+      this.identityBar = this.shadowRoot.querySelector('.identity-bar');
+      this.recognizeButton = this.shadowRoot.querySelector('.recognize-btn');
 
       this.launcher.addEventListener('click', () => this.toggle());
       this.closeButton.addEventListener('click', () => this.close());
@@ -545,6 +583,92 @@
         }
       });
       this.input.addEventListener('input', () => this.resizeInput());
+      this.attachButton.addEventListener('click', () => this.fileInput.click());
+      this.fileInput.addEventListener('change', () => this.handleImageSelection());
+      this.imageRemoveButton.addEventListener('click', () => this.clearSelectedImage());
+      this.recognizeButton.addEventListener('click', () => this.renderRecognitionForm());
+    }
+
+    updateRecognitionVisibility() {
+      if (!this.identityBar) return;
+      this.identityBar.hidden = !(this.identityRecognitionEnabled && this.sessionId);
+    }
+
+    handleImageSelection() {
+      const file = this.fileInput?.files?.[0] || null;
+      if (!file) return;
+      const allowed = new Set(['image/jpeg', 'image/png', 'image/webp']);
+      if (!allowed.has(file.type)) {
+        this.composerStatus.textContent = 'Use a JPG, PNG, or WebP image.';
+        this.fileInput.value = '';
+        return;
+      }
+      if (file.size > this.maxImageBytes) {
+        this.composerStatus.textContent = `Keep photos under ${Math.round(this.maxImageBytes / (1024 * 1024))} MB.`;
+        this.fileInput.value = '';
+        return;
+      }
+      this.selectedImage = file;
+      this.imageChipName.textContent = file.name || 'Photo attached';
+      this.imageChip.hidden = false;
+      this.composerStatus.textContent = '';
+      this.input?.focus({ preventScroll: true });
+    }
+
+    clearSelectedImage() {
+      this.selectedImage = null;
+      if (this.fileInput) this.fileInput.value = '';
+      if (this.imageChip) this.imageChip.hidden = true;
+      if (this.imageChipName) this.imageChipName.textContent = '';
+    }
+
+    renderRecognitionForm() {
+      if (!this.identityRecognitionEnabled || !this.sessionId || !this.compliance || !this.leadFormSlot) return;
+      this.leadFormSlot.textContent = '';
+      const card = document.createElement('div'); card.className = 'followup-card';
+      const title = document.createElement('div'); title.className = 'followup-title'; title.textContent = 'Recognize me securely';
+      const sub = document.createElement('div'); sub.className = 'followup-sub'; sub.textContent = `Verify the email already connected to your client record so ${this.assistantName || 'Wraya'} can securely continue relevant conversations across connected channels.`;
+      const form = document.createElement('form'); form.className = 'followup-form'; form.noValidate = true;
+      const emailField = this.makeFollowupField('Email', 'email', 'email', true, 'you@example.com');
+      const privacyText = this.compliance.privacy_processing_text || 'I acknowledge the Privacy Policy and Terms and consent to processing this information for this request.';
+      const privacy = this.makeConsentRow('privacy_acknowledged', privacyText, true);
+      const privacySpan = privacy.querySelector('span');
+      const privacyUrl = this.safeHttpsUrl(this.compliance.privacy_url); const termsUrl = this.safeHttpsUrl(this.compliance.terms_url);
+      if (privacySpan && (privacyUrl || termsUrl)) {
+        privacySpan.textContent = '';
+        privacySpan.append(document.createTextNode('I acknowledge '));
+        if (privacyUrl) { const a=document.createElement('a'); a.href=privacyUrl; a.target='_blank'; a.rel='noopener noreferrer'; a.textContent='Privacy Policy'; privacySpan.append(a); }
+        if (privacyUrl && termsUrl) privacySpan.append(document.createTextNode(' and '));
+        if (termsUrl) { const a=document.createElement('a'); a.href=termsUrl; a.target='_blank'; a.rel='noopener noreferrer'; a.textContent='Terms'; privacySpan.append(a); }
+        privacySpan.append(document.createTextNode(' and consent to identity verification for connected conversation continuity.'));
+      }
+      const actions = document.createElement('div'); actions.className = 'followup-actions';
+      const submit = document.createElement('button'); submit.type='submit'; submit.className='followup-submit'; submit.textContent='Send verification';
+      const back = document.createElement('button'); back.type='button'; back.className='handoff-btn secondary'; back.textContent='Back';
+      const status = document.createElement('div'); status.className='followup-status'; status.setAttribute('aria-live','polite');
+      back.addEventListener('click', () => { this.leadFormSlot.textContent=''; this.input?.focus({ preventScroll:true }); });
+      actions.append(submit, back, status); form.append(emailField, privacy, actions);
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const email=String(new FormData(form).get('email')||'').trim();
+        const acknowledged=form.querySelector('input[name="privacy_acknowledged"]')?.checked===true;
+        if (!email) { status.textContent='Enter the email connected to your client record.'; return; }
+        if (!acknowledged) { status.textContent='Please acknowledge the Privacy Policy and Terms.'; return; }
+        submit.disabled=true; status.textContent='Sending verification…';
+        try {
+          const url=new URL(IDENTITY_ENDPOINT); url.searchParams.set('site_key',SITE_KEY);
+          const response=await fetch(url.toString(),{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({mode:'recognize_me',visitor_id:visitorId,session_id:this.sessionId,email,privacy_acknowledged:true})});
+          const payload=await response.json().catch(()=>null);
+          if (response.status===429) { status.textContent='Too many verification attempts. Try again in a few minutes.'; return; }
+          if (!response.ok || !payload?.ok) throw new Error(payload?.error||`identity_${response.status}`);
+          const success=document.createElement('div'); success.className='followup-success'; success.textContent='Verification email sent. Open the link, then come back here and keep chatting — if it matches your existing client record, Wraya will securely continue with your relevant connected history.';
+          form.replaceWith(success);
+        } catch (error) {
+          console.error('[Wraya] Identity verification request failed:', error);
+          status.textContent='I couldn’t send verification right now. You can keep chatting without connected-history recognition.';
+        } finally { submit.disabled=false; }
+      });
+      card.append(title,sub,form); this.leadFormSlot.append(card); this.scrollToBottom(true);
     }
 
     toggle() {
@@ -777,7 +901,11 @@
         if (response.status===429) { status.textContent='Too many attempts. Please try again in a few minutes.'; return; }
         if (!response.ok || !payload?.ok) throw new Error(payload?.error||`lead_${response.status}`);
         this.leadSubmitted=true; safeLocalStorage.set(`${STORAGE_PREFIX}:${SITE_KEY}:lead:${this.sessionId}`,'1');
-        const success=document.createElement('div'); success.className='followup-success'; success.textContent='Thanks — your information was securely received using only the contact permissions you selected.';
+        const success=document.createElement('div'); success.className='followup-success';
+        success.textContent='Thanks — your information was securely received using only the contact permissions you selected.';
+        if (email && this.identityRecognitionEnabled) {
+          const verify=document.createElement('button'); verify.type='button'; verify.className='recognize-btn'; verify.style.display='block'; verify.style.marginTop='8px'; verify.textContent='Verify email for connected conversation history'; verify.addEventListener('click',()=>this.renderRecognitionForm()); success.append(verify);
+        }
         form.replaceWith(success);
       } catch (error) {
         console.error('[Wraya] Follow-up submission failed:', error);
@@ -789,52 +917,52 @@
       this.pending = value;
       this.input.disabled = value;
       this.sendButton.disabled = value;
+      if (this.attachButton) this.attachButton.disabled = value;
+      if (this.recognizeButton) this.recognizeButton.disabled = value;
       this.typingRow.hidden = !value;
       if (value) this.scrollToBottom(true);
     }
 
     async sendMessage() {
       const text = this.input.value.trim();
-      if (!text || this.pending) return;
+      const image = this.selectedImage;
+      if ((!text && !image) || this.pending) return;
 
       if (text.length > this.maxInputChars) {
-        this.addAssistantMessage(`Please keep your message under ${this.maxInputChars.toLocaleString()} characters.`);
+        this.composerStatus.textContent = `Please keep your message under ${this.maxInputChars.toLocaleString()} characters.`;
         return;
       }
 
       const requestId = makeId();
-      this.messages.push({ role: 'user', text, id: requestId });
-      this.appendMessageNode({ role: 'user', text, id: requestId });
+      const displayText = text || '📷 Photo attached';
+      this.messages.push({ role: 'user', text: displayText, id: requestId });
+      this.appendMessageNode({ role: 'user', text: displayText, id: requestId });
       this.input.value = '';
       this.resizeInput();
       this.setPending(true);
+      this.composerStatus.textContent = image ? 'Analyzing photo…' : '';
       this.scrollToBottom(true);
 
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30000);
+      const timeout = setTimeout(() => controller.abort(), image ? 60000 : 30000);
 
       try {
         const endpoint = new URL(CHAT_ENDPOINT);
         endpoint.searchParams.set('site_key', SITE_KEY);
+        let fetchOptions;
+        if (image) {
+          const fd = new FormData();
+          fd.append('visitor_id', visitorId);
+          fd.append('request_id', requestId);
+          fd.append('message_text', text || 'I sent a photo.');
+          fd.append('page_url', location.href);
+          fd.append('image', image, image.name || 'photo');
+          fetchOptions = { method:'POST', mode:'cors', credentials:'omit', cache:'no-store', signal:controller.signal, headers:{Accept:'application/json'}, body:fd };
+        } else {
+          fetchOptions = { method:'POST', mode:'cors', credentials:'omit', cache:'no-store', signal:controller.signal, headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({visitor_id:visitorId,request_id:requestId,message_text:text,page_url:location.href}) };
+        }
 
-        const response = await fetch(endpoint.toString(), {
-          method: 'POST',
-          mode: 'cors',
-          credentials: 'omit',
-          cache: 'no-store',
-          signal: controller.signal,
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json'
-          },
-          body: JSON.stringify({
-            visitor_id: visitorId,
-            request_id: requestId,
-            message_text: text,
-            page_url: location.href
-          })
-        });
-
+        const response = await fetch(endpoint.toString(), fetchOptions);
         const payload = await response.json().catch(() => null);
 
         if (response.status === 429) {
@@ -842,33 +970,34 @@
           this.addAssistantMessage(`You’re sending messages a little too quickly. Try again in about ${retry} seconds.`);
           return;
         }
-
-        if (response.status === 413) {
-          const max = Number(payload?.max_input_chars) || this.maxInputChars;
-          this.addAssistantMessage(`That message is too long. Please keep it under ${max.toLocaleString()} characters.`);
+        if (response.status === 415) {
+          this.addAssistantMessage('I can analyze JPG, PNG, or WebP images here. Try a screenshot if your photo is in another format.');
           return;
         }
-
-        if (!response.ok || !payload?.ok) {
-          throw new Error(payload?.error || `chat_${response.status}`);
+        if (response.status === 413) {
+          if (image) this.addAssistantMessage(`That photo is too large. Try a smaller image or screenshot under ${Math.round(this.maxImageBytes/(1024*1024))} MB.`);
+          else { const max = Number(payload?.max_input_chars) || this.maxInputChars; this.addAssistantMessage(`That message is too long. Please keep it under ${max.toLocaleString()} characters.`); }
+          return;
         }
+        if (!response.ok || !payload?.ok) throw new Error(payload?.error || `chat_${response.status}`);
         if (payload.session_id) {
           this.sessionId = payload.session_id;
           this.leadSubmitted = safeLocalStorage.get(`${STORAGE_PREFIX}:${SITE_KEY}:lead:${this.sessionId}`) === '1';
+          this.updateRecognitionVisibility();
         }
-
         if (payload.processing === true) {
           this.addAssistantMessage('I’m still processing that message. Please give it a moment and try again.');
           return;
         }
-
         const reply = typeof payload.reply_text === 'string' ? payload.reply_text.trim() : '';
         if (reply) this.addAssistantMessage(reply, payload.message_id || makeId(), payload.intent || null);
+        if (image) this.clearSelectedImage();
       } catch (error) {
         console.error('[Wraya] Message failed:', error);
         this.addAssistantMessage(this.fallbackMessage);
       } finally {
         clearTimeout(timeout);
+        this.composerStatus.textContent = '';
         this.setPending(false);
         if (this.isOpen) this.input.focus({ preventScroll: true });
       }
