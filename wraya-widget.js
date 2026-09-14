@@ -178,20 +178,35 @@
       const theme = this.config?.theme_config || {};
       const copy = this.config?.copy_config || {};
       const root = this.shadowRoot.host;
+      const configuredName = typeof copy.assistant_name === 'string' ? copy.assistant_name.trim() : '';
+      const assistantName = configuredName ? configuredName.slice(0, 80) : 'Wraya';
+      const assistantInitial = Array.from(assistantName)[0]?.toUpperCase() || 'W';
+      this.assistantName = assistantName;
 
       root.style.setProperty('--wraya-primary', this.safeColor(theme.primary, '#C8920A'));
       root.style.setProperty('--wraya-accent', this.safeColor(theme.accent, '#E8B830'));
       root.style.setProperty('--wraya-bg', this.safeColor(theme.background, '#080808'));
       root.style.setProperty('--wraya-text', this.safeColor(theme.text, '#FFFFFF'));
 
-      const welcome = copy.welcome_message || 'Hi — I’m Wraya. What can I help you with?';
-      const placeholder = copy.input_placeholder || 'Ask Wraya anything…';
+      const welcome = copy.welcome_message || `Hi — I’m ${assistantName}. What can I help you with?`;
+      const placeholder = copy.input_placeholder || `Ask ${assistantName} anything…`;
       this.shadowRoot.querySelector('[data-welcome]').textContent = welcome;
       this.shadowRoot.querySelector('textarea').placeholder = placeholder;
       this.shadowRoot.querySelector('textarea').maxLength = this.maxInputChars;
+      this.shadowRoot.querySelector('textarea').setAttribute('aria-label', `Message ${assistantName}`);
 
       const businessName = this.config.business_name || 'this business';
       this.shadowRoot.querySelector('[data-business-name]').textContent = businessName;
+
+      this.shadowRoot.querySelector('.launcher-title').textContent = `Ask ${assistantName}`;
+      this.shadowRoot.querySelector('.launcher-mark').textContent = assistantInitial;
+      this.shadowRoot.querySelector('.avatar').textContent = assistantInitial;
+      this.shadowRoot.querySelector('.header-name').textContent = assistantName;
+      this.shadowRoot.querySelector('.intro strong').textContent = assistantName;
+      this.shadowRoot.querySelector('.typing').setAttribute('aria-label', `${assistantName} is typing`);
+      this.shadowRoot.querySelector('.panel').setAttribute('aria-label', `Chat with ${assistantName}`);
+      this.shadowRoot.querySelector('.close').setAttribute('aria-label', `Close ${assistantName} chat`);
+      this.shadowRoot.querySelector('.launcher').setAttribute('aria-label', `Open ${assistantName} chat`);
 
       const position = String(this.config.launcher_position || 'bottom_right');
       this.classList.toggle('wraya-left', position === 'bottom_left');
@@ -540,7 +555,7 @@
       this.isOpen = true;
       this.panel.hidden = false;
       this.launcher.setAttribute('aria-expanded', 'true');
-      this.launcher.setAttribute('aria-label', 'Close Wraya chat');
+      this.launcher.setAttribute('aria-label', `Close ${this.assistantName || 'Wraya'} chat`);
       this.scrollToBottom(false);
       setTimeout(() => this.input?.focus({ preventScroll: true }), 80);
     }
@@ -549,7 +564,7 @@
       this.isOpen = false;
       this.panel.hidden = true;
       this.launcher.setAttribute('aria-expanded', 'false');
-      this.launcher.setAttribute('aria-label', 'Open Wraya chat');
+      this.launcher.setAttribute('aria-label', `Open ${this.assistantName || 'Wraya'} chat`);
       this.launcher.focus({ preventScroll: true });
     }
 
@@ -637,7 +652,7 @@
       title.textContent = 'How would you like to continue?';
       const sub = document.createElement('div');
       sub.className = 'followup-sub';
-      sub.textContent = 'You can keep chatting with Wraya, or securely share contact details for a human follow-up.';
+      sub.textContent = `You can keep chatting with ${this.assistantName || 'Wraya'}, or securely share contact details for a human follow-up.`;
 
       const actions = document.createElement('div');
       actions.className = 'handoff-actions';
