@@ -591,7 +591,7 @@
 
     updateRecognitionVisibility() {
       if (!this.identityBar) return;
-      this.identityBar.hidden = !(this.identityRecognitionEnabled && this.sessionId);
+      this.identityBar.hidden = !this.identityRecognitionEnabled;
     }
 
     handleImageSelection() {
@@ -623,7 +623,7 @@
     }
 
     renderRecognitionForm() {
-      if (!this.identityRecognitionEnabled || !this.sessionId || !this.compliance || !this.leadFormSlot) return;
+      if (!this.identityRecognitionEnabled || !this.compliance || !this.leadFormSlot) return;
       this.leadFormSlot.textContent = '';
       const card = document.createElement('div'); card.className = 'followup-card';
       const title = document.createElement('div'); title.className = 'followup-title'; title.textContent = 'Recognize me securely';
