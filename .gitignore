@@ -1,0 +1,22 @@
+# Secrets and environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
+**/service-role*
+**/*secret*
+**/*token*
+
+# Local
+.DS_Store
+.vscode/
+.idea/
+node_modules/
+dist/
+coverage/
+*.log
