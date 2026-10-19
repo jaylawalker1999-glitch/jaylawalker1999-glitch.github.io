@@ -1,0 +1,35 @@
+name: WSA Public Website Staging QA
+on:
+  pull_request:
+    paths:
+      - index.html
+      - wraya-widget.js
+      - _headers
+      - .github/workflows/wsa-website-staging-qa.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  frontend-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check widget JavaScript syntax
+        run: node --check wraya-widget.js
+      - name: Validate required staging wiring and content
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs'), assert=require('node:assert/strict');
+          const html=fs.readFileSync('index.html','utf8');
+          const js=fs.readFileSync('wraya-widget.js','utf8');
+          const headers=fs.readFileSync('_headers','utf8');
+          assert(!html.includes('Founding Client Advantage'));
+          assert.match(html,/wraya-widget\.js/);
+          assert.match(html,/data-site-key="wsa_pub_[a-f0-9]+"/);
+          assert.match(js,/bootstrapBrowserSession/);
+          assert.match(js,/X-Wraya-Browser-Session/);
+          assert.match(js,/browserHeaders\(true\)/);
+          assert.match(headers,/X-Content-Type-Options: nosniff/);
+          console.log('PASS: staging mount, credential integration, callout removal, baseline headers');
+          NODE
