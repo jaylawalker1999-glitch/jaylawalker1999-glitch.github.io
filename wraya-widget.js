@@ -189,14 +189,13 @@
       try {
         const historyUrl = new URL(HISTORY_ENDPOINT);
         historyUrl.searchParams.set('site_key', SITE_KEY);
-        historyUrl.searchParams.set('visitor_id', visitorId);
-
         const response = await fetch(historyUrl.toString(), {
-          method: 'GET',
+          method: 'POST',
           mode: 'cors',
           credentials: 'omit',
           cache: 'no-store',
-          headers: browserHeaders()
+          headers: browserHeaders(true),
+          body: JSON.stringify({ visitor_id: visitorId })
         });
 
         if (!response.ok) return;
