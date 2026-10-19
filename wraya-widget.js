@@ -69,6 +69,8 @@
       this.leadSubmitted = false;
       this.pending = false;
       this.isOpen = false;
+      this.chatReady = false;
+      this.chatInitPromise = null;
       this.identityRecognitionEnabled = false;
       this.photoUploadEnabled = false;
       this.selectedImage = null;
@@ -112,16 +114,46 @@
         this.photoUploadEnabled = payload.site.photo_upload?.enabled === true;
         this.maxImageBytes = Number(payload.site.photo_upload?.max_bytes) || this.maxImageBytes;
         this.applyConfig();
-        await this.bootstrapBrowserSession();
-        await this.loadCompliance();
-        await this.loadHistory();
-        this.showReady();
+        // Announce the launcher without challenging every homepage visitor.
+        // A secure session is established only when the visitor opens chat.
+        this.launcher.hidden = false;
+        this.renderMessages();
       } catch (error) {
         console.error('[Wraya] Widget bootstrap failed:', error);
         this.remove();
       }
     }
 
+
+    async initializeConversation() {
+      if (this.chatReady) return;
+      if (this.chatInitPromise) return this.chatInitPromise;
+      this.composerStatus.textContent = 'Securing your conversation…';
+      this.input.disabled = true;
+      this.sendButton.disabled = true;
+      this.attachButton.disabled = true;
+      this.chatInitPromise = (async () => {
+        await this.bootstrapBrowserSession();
+        await this.loadCompliance();
+        await this.loadHistory();
+        this.chatReady = true;
+        this.input.disabled = false;
+        this.sendButton.disabled = false;
+        this.attachButton.disabled = false;
+        this.composerStatus.textContent = '';
+        this.showReady();
+        if (this.isOpen) this.input.focus({ preventScroll: true });
+      })();
+      try {
+        await this.chatInitPromise;
+      } catch (error) {
+        // Keep the launcher visible and fail closed rather than removing it.
+        console.warn('[Wraya] Secure session unavailable');
+        this.composerStatus.textContent = 'Secure chat is temporarily unavailable. Close and reopen to retry.';
+      } finally {
+        this.chatInitPromise = null;
+      }
+    }
 
     async obtainBotCheckToken(siteKey) {
       if (!/^[A-Za-z0-9_-]{12,128}$/.test(String(siteKey || ''))) {
@@ -794,6 +826,7 @@
 
     open() {
       this.isOpen = true;
+      if (!this.chatReady) void this.initializeConversation();
       this.panel.hidden = false;
       this.launcher.setAttribute('aria-expanded', 'true');
       this.launcher.setAttribute('aria-label', `Close ${this.assistantName || 'Wraya'} chat`);
@@ -1041,6 +1074,7 @@
     }
 
     async sendMessage() {
+      if (!this.chatReady) return;
       const text = this.input.value.trim();
       const image = this.selectedImage;
       if ((!text && !image) || this.pending) return;
