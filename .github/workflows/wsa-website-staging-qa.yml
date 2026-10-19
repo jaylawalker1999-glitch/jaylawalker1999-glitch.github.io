@@ -33,7 +33,7 @@ jobs:
           assert.match(js,/turnstile_token/);
           assert.match(js,/wraya_web_bootstrap/);
           assert.match(js,/obtainBotCheckToken/);
-          assert.match(js,/globalThis\\.turnstile\\.render/);
+          assert(js.includes('globalThis.turnstile.render('));
           assert(js.includes('https://challenges.cloudflare.com/turnstile/v0/api.js'));
           assert.match(headers,/X-Content-Type-Options: nosniff/);
           console.log('PASS: staging mount, credential integration, callout removal, baseline headers');
