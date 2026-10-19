@@ -33,6 +33,11 @@ jobs:
           assert.match(js,/turnstile_token/);
           assert.match(js,/wraya_web_bootstrap/);
           assert.match(js,/obtainBotCheckToken/);
+          assert.match(js,/async initializeConversation\(\)/);
+          assert.match(js,/if \(!this\.chatReady\) void this\.initializeConversation\(\)/);
+          assert.match(js,/if \(!this\.chatReady\) return;/);
+          const boot=js.slice(js.indexOf('async bootstrap() {'),js.indexOf('async initializeConversation()'));
+          assert(!boot.includes('await this.bootstrapBrowserSession()'), 'Turnstile must not run on homepage load');
           assert(js.includes('globalThis.turnstile.render('));
           assert(js.includes('https://challenges.cloudflare.com/turnstile/v0/api.js'));
           assert.match(headers,/X-Content-Type-Options: nosniff/);
