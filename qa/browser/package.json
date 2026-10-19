@@ -1,0 +1,11 @@
+{
+  "name": "wsa-website-isolated-browser-qa",
+  "private": true,
+  "description": "Synthetic isolated frontend testing; no production calls",
+  "scripts": {
+    "test": "playwright test --reporter=line"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
+  }
+}
