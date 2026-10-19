@@ -5,6 +5,7 @@ on:
       - index.html
       - wraya-widget.js
       - site.js
+      - 'qa/browser/**'
       - _headers
       - .github/workflows/wsa-website-staging-qa.yml
   workflow_dispatch:
@@ -60,3 +61,22 @@ jobs:
           assert.match(headers,/X-Content-Type-Options: nosniff/);
           console.log('PASS: staging mount, credential integration, callout removal, baseline headers');
           NODE
+
+  isolated-browser-qa:
+    needs: frontend-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned isolated browser test dependency
+        working-directory: qa/browser
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium for synthetic UI tests
+        working-directory: qa/browser
+        run: npx playwright install --with-deps chromium
+      - name: Test website and Wraya against mocked endpoints only
+        working-directory: qa/browser
+        run: npm test
