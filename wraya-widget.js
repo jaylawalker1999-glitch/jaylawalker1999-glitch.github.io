@@ -38,12 +38,25 @@
     }
   };
 
-  const visitorStorageKey = `${STORAGE_PREFIX}:${SITE_KEY}:visitor`;
-  let visitorId = safeLocalStorage.get(visitorStorageKey);
-  if (!visitorId) {
-    visitorId = makeId();
-    safeLocalStorage.set(visitorStorageKey, visitorId);
-  }
+  // Legacy visitor IDs are correlation, NOT credentials. They cannot be
+  // promoted into an authenticated browser session without fresh proof.
+  const credentialStorageKey = `${STORAGE_PREFIX}:${SITE_KEY}:browser_credential`;
+  let visitorId = null;
+  let browserSessionToken = null;
+  try {
+    const previous = JSON.parse(safeLocalStorage.get(credentialStorageKey) || 'null');
+    if (previous && /^[0-9a-f-]{36}$/.test(String(previous.visitor_id || '')) &&
+        /^[A-Za-z0-9_-]{43}$/.test(String(previous.session_token || ''))) {
+      visitorId = previous.visitor_id;
+      browserSessionToken = previous.session_token;
+    }
+  } catch { /* no preexisting verified browser credential */ }
+
+  const browserHeaders = (json = false) => ({
+    ...(json ? { 'Content-Type': 'application/json' } : {}),
+    Accept: 'application/json',
+    ...(browserSessionToken ? { 'X-Wraya-Browser-Session': browserSessionToken } : {})
+  });
 
   class WrayaChat extends HTMLElement {
     constructor() {
@@ -99,6 +112,7 @@
         this.photoUploadEnabled = payload.site.photo_upload?.enabled === true;
         this.maxImageBytes = Number(payload.site.photo_upload?.max_bytes) || this.maxImageBytes;
         this.applyConfig();
+        await this.bootstrapBrowserSession();
         await this.loadCompliance();
         await this.loadHistory();
         this.showReady();
@@ -108,6 +122,28 @@
       }
     }
 
+
+    async bootstrapBrowserSession() {
+      const url = new URL(CHAT_ENDPOINT);
+      url.searchParams.set('site_key', SITE_KEY);
+      const response = await fetch(url.toString(), {
+        method: 'POST', mode: 'cors', credentials: 'omit', cache: 'no-store',
+        headers: browserHeaders(true),
+        body: JSON.stringify({ operation: 'browser_session_bootstrap', visitor_id: visitorId })
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.ok ||
+          !/^[0-9a-f-]{36}$/.test(String(result.visitor_id || '')) ||
+          !/^[A-Za-z0-9_-]{43}$/.test(String(result.browser_session_token || ''))) {
+        throw new Error('browser_credential_unavailable');
+      }
+      visitorId = result.visitor_id;
+      browserSessionToken = result.browser_session_token;
+      safeLocalStorage.set(credentialStorageKey, JSON.stringify({
+        visitor_id: visitorId,
+        session_token: browserSessionToken
+      }));
+    }
 
     async loadCompliance() {
       try {
@@ -160,7 +196,7 @@
           mode: 'cors',
           credentials: 'omit',
           cache: 'no-store',
-          headers: { Accept: 'application/json' }
+          headers: browserHeaders()
         });
 
         if (!response.ok) return;
@@ -657,7 +693,7 @@
         submit.disabled=true; status.textContent='Sending verification…';
         try {
           const url=new URL(IDENTITY_ENDPOINT); url.searchParams.set('site_key',SITE_KEY);
-          const response=await fetch(url.toString(),{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({mode:'recognize_me',visitor_id:visitorId,session_id:this.sessionId,email,privacy_acknowledged:true})});
+          const response=await fetch(url.toString(),{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',headers:browserHeaders(true),body:JSON.stringify({mode:'recognize_me',visitor_id:visitorId,session_id:this.sessionId,email,privacy_acknowledged:true})});
           const payload=await response.json().catch(()=>null);
           if (response.status===429) { status.textContent='Too many verification attempts. Try again in a few minutes.'; return; }
           if (!response.ok || !payload?.ok) throw new Error(payload?.error||`identity_${response.status}`);
@@ -896,7 +932,7 @@
       submit.disabled=true; status.textContent='Sending securely…';
       try {
         const url=new URL(LEAD_ENDPOINT); url.searchParams.set('site_key',SITE_KEY);
-        const response=await fetch(url.toString(),{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({visitor_id:visitorId,session_id:this.sessionId,full_name:fullName,email:email||null,phone:phone||null,preferred_contact_method:preferred,privacy_acknowledged:true,sms_nonmarketing_consent:Boolean(phone&&smsNon),sms_marketing_consent:Boolean(phone&&smsMarketing),page_url:location.href})});
+        const response=await fetch(url.toString(),{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',headers:browserHeaders(true),body:JSON.stringify({visitor_id:visitorId,session_id:this.sessionId,full_name:fullName,email:email||null,phone:phone||null,preferred_contact_method:preferred,privacy_acknowledged:true,sms_nonmarketing_consent:Boolean(phone&&smsNon),sms_marketing_consent:Boolean(phone&&smsMarketing),page_url:location.href})});
         const payload=await response.json().catch(()=>null);
         if (response.status===429) { status.textContent='Too many attempts. Please try again in a few minutes.'; return; }
         if (!response.ok || !payload?.ok) throw new Error(payload?.error||`lead_${response.status}`);
@@ -957,9 +993,9 @@
           fd.append('message_text', text || 'I sent a photo.');
           fd.append('page_url', location.href);
           fd.append('image', image, image.name || 'photo');
-          fetchOptions = { method:'POST', mode:'cors', credentials:'omit', cache:'no-store', signal:controller.signal, headers:{Accept:'application/json'}, body:fd };
+          fetchOptions = { method:'POST', mode:'cors', credentials:'omit', cache:'no-store', signal:controller.signal, headers:browserHeaders(), body:fd };
         } else {
-          fetchOptions = { method:'POST', mode:'cors', credentials:'omit', cache:'no-store', signal:controller.signal, headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({visitor_id:visitorId,request_id:requestId,message_text:text,page_url:location.href}) };
+          fetchOptions = { method:'POST', mode:'cors', credentials:'omit', cache:'no-store', signal:controller.signal, headers:browserHeaders(true), body:JSON.stringify({visitor_id:visitorId,request_id:requestId,message_text:text,page_url:location.href}) };
         }
 
         const response = await fetch(endpoint.toString(), fetchOptions);
