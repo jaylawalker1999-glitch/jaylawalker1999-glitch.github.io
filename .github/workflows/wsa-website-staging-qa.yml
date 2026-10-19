@@ -4,6 +4,7 @@ on:
     paths:
       - index.html
       - wraya-widget.js
+      - site.js
       - _headers
       - .github/workflows/wsa-website-staging-qa.yml
   workflow_dispatch:
@@ -16,7 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check widget JavaScript syntax
-        run: node --check wraya-widget.js
+        run: |
+          node --check wraya-widget.js
+          node --check site.js
       - name: Validate required staging wiring and content
         run: |
           node - <<'NODE'
@@ -24,6 +27,20 @@ jobs:
           const html=fs.readFileSync('index.html','utf8');
           const js=fs.readFileSync('wraya-widget.js','utf8');
           const headers=fs.readFileSync('_headers','utf8');
+          const siteJs=fs.readFileSync('site.js','utf8');
+          assert.match(html,/<script src="\/site\.js" defer><\/script>/);
+          assert(!/\bon(click|load|change|submit|error|focus|input)=/i.test(html),
+            'Inline HTML event handlers must be removed under CSP');
+          assert.match(siteJs,/addEventListener\('click', closeMobile\)/);
+          assert.match(siteJs,/addEventListener\('click', toggleMobile\)/);
+          assert.match(siteJs,/addEventListener\('click', runCalc\)/);
+          assert.match(siteJs,/toggleFaq\(btn\)/);
+          const csp=headers.split('Content-Security-Policy:')[1];
+          assert(csp && csp.includes("script-src 'self' https://challenges.cloudflare.com"));
+          assert(!csp.includes("script-src 'self' 'unsafe-inline'"));
+          assert(csp.includes("script-src-attr 'none'"));
+          assert(csp.includes("connect-src 'self' https://xdsblwbujxizqipgsaik.supabase.co"));
+          assert(csp.includes("frame-src https://challenges.cloudflare.com"));
           assert(!html.includes('Founding Client Advantage'));
           assert.match(html,/wraya-widget\.js/);
           assert.match(html,/data-site-key="wsa_pub_[a-f0-9]+"/);
