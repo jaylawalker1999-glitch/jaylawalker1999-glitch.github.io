@@ -123,22 +123,104 @@
     }
 
 
+    async obtainBotCheckToken(siteKey) {
+      if (!/^[A-Za-z0-9_-]{12,128}$/.test(String(siteKey || ''))) {
+        throw new Error('bot_check_unavailable');
+      }
+      // The public site key is provided by the backend; the Siteverify secret
+      // remains server-only and is never bundled with the page.
+      if (!globalThis.turnstile) {
+        await new Promise((resolve, reject) => {
+          const existing = document.querySelector('script[data-wsa-turnstile-loader]');
+          if (existing) {
+            if (globalThis.turnstile) return resolve();
+            existing.addEventListener('load', resolve, { once: true });
+            existing.addEventListener('error', () => reject(new Error('bot_check_unavailable')), { once: true });
+            return;
+          }
+          const script = document.createElement('script');
+          script.dataset.wsaTurnstileLoader = '1';
+          script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+          script.async = true;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error('bot_check_unavailable'));
+          document.head.appendChild(script);
+        });
+      }
+      if (!globalThis.turnstile || typeof globalThis.turnstile.render !== 'function') {
+        throw new Error('bot_check_unavailable');
+      }
+      const container = document.createElement('div');
+      container.setAttribute('aria-label', 'Website security verification');
+      container.style.cssText = 'position:fixed;z-index:2147483645;bottom:85px;right:18px;max-width:calc(100vw - 36px)';
+      document.body.appendChild(container);
+      return await new Promise((resolve, reject) => {
+        let widgetId = null;
+        let resolved = false;
+        const finish = (error, token) => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(timeout);
+          try { if (widgetId !== null) globalThis.turnstile.remove(widgetId); } catch { /* best effort */ }
+          container.remove();
+          if (error) reject(error);
+          else resolve(token);
+        };
+        const timeout = setTimeout(() => finish(new Error('bot_check_timeout')), 120000);
+        try {
+          widgetId = globalThis.turnstile.render(container, {
+            sitekey: siteKey,
+            action: 'wraya_web_bootstrap',
+            theme: 'auto',
+            appearance: 'interaction-only',
+            execution: 'execute',
+            callback: (token) => finish(null, token),
+            'error-callback': () => finish(new Error('bot_check_failed')),
+            'expired-callback': () => finish(new Error('bot_check_expired'))
+          });
+          globalThis.turnstile.execute(widgetId);
+        } catch { finish(new Error('bot_check_unavailable')); }
+      });
+    }
+
     async bootstrapBrowserSession() {
       const url = new URL(CHAT_ENDPOINT);
       url.searchParams.set('site_key', SITE_KEY);
-      const response = await fetch(url.toString(), {
-        method: 'POST', mode: 'cors', credentials: 'omit', cache: 'no-store',
-        headers: browserHeaders(true),
-        body: JSON.stringify({ operation: 'browser_session_bootstrap', visitor_id: visitorId })
-      });
-      const result = await response.json().catch(() => null);
-      if (!response.ok || !result?.ok ||
-          !/^[0-9a-f-]{36}$/.test(String(result.visitor_id || '')) ||
-          !/^[A-Za-z0-9_-]{43}$/.test(String(result.browser_session_token || ''))) {
+      const botConfig = this.config?.turnstile || {};
+      const required = botConfig.required === true;
+      const send = async (turnstileToken) => {
+        const response = await fetch(url.toString(), {
+          method: 'POST', mode: 'cors', credentials: 'omit', cache: 'no-store',
+          headers: browserHeaders(true),
+          body: JSON.stringify({
+            operation: 'browser_session_bootstrap',
+            visitor_id: visitorId,
+            ...(turnstileToken ? { turnstile_token: turnstileToken } : {})
+          })
+        });
+        return { response, data: await response.json().catch(() => null) };
+      };
+      // First restore an existing verified credential. No bot challenge needed
+      // for a browser proving possession of a valid, unexpired session token.
+      let result = null;
+      if (visitorId && browserSessionToken) {
+        result = await send(null);
+        if (!(result.response.ok && result.data?.ok)) {
+          if (result.response.status !== 403) throw new Error('browser_credential_unavailable');
+          result = null;
+        }
+      }
+      if (!result) {
+        const challenge = required ? await this.obtainBotCheckToken(botConfig.site_key) : null;
+        result = await send(challenge);
+      }
+      if (!result.response.ok || !result.data?.ok ||
+          !/^[0-9a-f-]{36}$/.test(String(result.data.visitor_id || '')) ||
+          !/^[A-Za-z0-9_-]{43}$/.test(String(result.data.browser_session_token || ''))) {
         throw new Error('browser_credential_unavailable');
       }
-      visitorId = result.visitor_id;
-      browserSessionToken = result.browser_session_token;
+      visitorId = result.data.visitor_id;
+      browserSessionToken = result.data.browser_session_token;
       safeLocalStorage.set(credentialStorageKey, JSON.stringify({
         visitor_id: visitorId,
         session_token: browserSessionToken
