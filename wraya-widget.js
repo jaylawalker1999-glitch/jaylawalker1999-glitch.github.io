@@ -38,12 +38,25 @@
     }
   };
 
-  const visitorStorageKey = `${STORAGE_PREFIX}:${SITE_KEY}:visitor`;
-  let visitorId = safeLocalStorage.get(visitorStorageKey);
-  if (!visitorId) {
-    visitorId = makeId();
-    safeLocalStorage.set(visitorStorageKey, visitorId);
-  }
+  // Legacy visitor IDs are correlation, NOT credentials. They cannot be
+  // promoted into an authenticated browser session without fresh proof.
+  const credentialStorageKey = `${STORAGE_PREFIX}:${SITE_KEY}:browser_credential`;
+  let visitorId = null;
+  let browserSessionToken = null;
+  try {
+    const previous = JSON.parse(safeLocalStorage.get(credentialStorageKey) || 'null');
+    if (previous && /^[0-9a-f-]{36}$/.test(String(previous.visitor_id || '')) &&
+        /^[A-Za-z0-9_-]{43}$/.test(String(previous.session_token || ''))) {
+      visitorId = previous.visitor_id;
+      browserSessionToken = previous.session_token;
+    }
+  } catch { /* no preexisting verified browser credential */ }
+
+  const browserHeaders = (json = false) => ({
+    ...(json ? { 'Content-Type': 'application/json' } : {}),
+    Accept: 'application/json',
+    ...(browserSessionToken ? { 'X-Wraya-Browser-Session': browserSessionToken } : {})
+  });
 
   class WrayaChat extends HTMLElement {
     constructor() {
@@ -56,6 +69,8 @@
       this.leadSubmitted = false;
       this.pending = false;
       this.isOpen = false;
+      this.chatReady = false;
+      this.chatInitPromise = null;
       this.identityRecognitionEnabled = false;
       this.photoUploadEnabled = false;
       this.selectedImage = null;
@@ -99,15 +114,150 @@
         this.photoUploadEnabled = payload.site.photo_upload?.enabled === true;
         this.maxImageBytes = Number(payload.site.photo_upload?.max_bytes) || this.maxImageBytes;
         this.applyConfig();
-        await this.loadCompliance();
-        await this.loadHistory();
-        this.showReady();
+        // Announce the launcher without challenging every homepage visitor.
+        // A secure session is established only when the visitor opens chat.
+        this.launcher.hidden = false;
+        this.renderMessages();
       } catch (error) {
         console.error('[Wraya] Widget bootstrap failed:', error);
         this.remove();
       }
     }
 
+
+    async initializeConversation() {
+      if (this.chatReady) return;
+      if (this.chatInitPromise) return this.chatInitPromise;
+      this.composerStatus.textContent = 'Securing your conversation…';
+      this.input.disabled = true;
+      this.sendButton.disabled = true;
+      this.attachButton.disabled = true;
+      this.chatInitPromise = (async () => {
+        await this.bootstrapBrowserSession();
+        await this.loadCompliance();
+        await this.loadHistory();
+        this.chatReady = true;
+        this.input.disabled = false;
+        this.sendButton.disabled = false;
+        this.attachButton.disabled = false;
+        this.composerStatus.textContent = '';
+        this.showReady();
+        if (this.isOpen) this.input.focus({ preventScroll: true });
+      })();
+      try {
+        await this.chatInitPromise;
+      } catch (error) {
+        // Keep the launcher visible and fail closed rather than removing it.
+        console.warn('[Wraya] Secure session unavailable');
+        this.composerStatus.textContent = 'Secure chat is temporarily unavailable. Close and reopen to retry.';
+      } finally {
+        this.chatInitPromise = null;
+      }
+    }
+
+    async obtainBotCheckToken(siteKey) {
+      if (!/^[A-Za-z0-9_-]{12,128}$/.test(String(siteKey || ''))) {
+        throw new Error('bot_check_unavailable');
+      }
+      // The public site key is provided by the backend; the Siteverify secret
+      // remains server-only and is never bundled with the page.
+      if (!globalThis.turnstile) {
+        await new Promise((resolve, reject) => {
+          const existing = document.querySelector('script[data-wsa-turnstile-loader]');
+          if (existing) {
+            if (globalThis.turnstile) return resolve();
+            existing.addEventListener('load', resolve, { once: true });
+            existing.addEventListener('error', () => reject(new Error('bot_check_unavailable')), { once: true });
+            return;
+          }
+          const script = document.createElement('script');
+          script.dataset.wsaTurnstileLoader = '1';
+          script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+          script.async = true;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error('bot_check_unavailable'));
+          document.head.appendChild(script);
+        });
+      }
+      if (!globalThis.turnstile || typeof globalThis.turnstile.render !== 'function') {
+        throw new Error('bot_check_unavailable');
+      }
+      const container = document.createElement('div');
+      container.setAttribute('aria-label', 'Website security verification');
+      container.style.cssText = 'position:fixed;z-index:2147483645;bottom:85px;right:18px;max-width:calc(100vw - 36px)';
+      document.body.appendChild(container);
+      return await new Promise((resolve, reject) => {
+        let widgetId = null;
+        let resolved = false;
+        const finish = (error, token) => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(timeout);
+          try { if (widgetId !== null) globalThis.turnstile.remove(widgetId); } catch { /* best effort */ }
+          container.remove();
+          if (error) reject(error);
+          else resolve(token);
+        };
+        const timeout = setTimeout(() => finish(new Error('bot_check_timeout')), 120000);
+        try {
+          widgetId = globalThis.turnstile.render(container, {
+            sitekey: siteKey,
+            action: 'wraya_web_bootstrap',
+            theme: 'auto',
+            appearance: 'interaction-only',
+            execution: 'execute',
+            callback: (token) => finish(null, token),
+            'error-callback': () => finish(new Error('bot_check_failed')),
+            'expired-callback': () => finish(new Error('bot_check_expired'))
+          });
+          globalThis.turnstile.execute(widgetId);
+        } catch { finish(new Error('bot_check_unavailable')); }
+      });
+    }
+
+    async bootstrapBrowserSession() {
+      const url = new URL(CHAT_ENDPOINT);
+      url.searchParams.set('site_key', SITE_KEY);
+      const botConfig = this.config?.turnstile || {};
+      const required = botConfig.required === true;
+      const send = async (turnstileToken) => {
+        const response = await fetch(url.toString(), {
+          method: 'POST', mode: 'cors', credentials: 'omit', cache: 'no-store',
+          headers: browserHeaders(true),
+          body: JSON.stringify({
+            operation: 'browser_session_bootstrap',
+            visitor_id: visitorId,
+            ...(turnstileToken ? { turnstile_token: turnstileToken } : {})
+          })
+        });
+        return { response, data: await response.json().catch(() => null) };
+      };
+      // First restore an existing verified credential. No bot challenge needed
+      // for a browser proving possession of a valid, unexpired session token.
+      let result = null;
+      if (visitorId && browserSessionToken) {
+        result = await send(null);
+        if (!(result.response.ok && result.data?.ok)) {
+          if (result.response.status !== 403) throw new Error('browser_credential_unavailable');
+          result = null;
+        }
+      }
+      if (!result) {
+        const challenge = required ? await this.obtainBotCheckToken(botConfig.site_key) : null;
+        result = await send(challenge);
+      }
+      if (!result.response.ok || !result.data?.ok ||
+          !/^[0-9a-f-]{36}$/.test(String(result.data.visitor_id || '')) ||
+          !/^[A-Za-z0-9_-]{43}$/.test(String(result.data.browser_session_token || ''))) {
+        throw new Error('browser_credential_unavailable');
+      }
+      visitorId = result.data.visitor_id;
+      browserSessionToken = result.data.browser_session_token;
+      safeLocalStorage.set(credentialStorageKey, JSON.stringify({
+        visitor_id: visitorId,
+        session_token: browserSessionToken
+      }));
+    }
 
     async loadCompliance() {
       try {
@@ -153,14 +303,13 @@
       try {
         const historyUrl = new URL(HISTORY_ENDPOINT);
         historyUrl.searchParams.set('site_key', SITE_KEY);
-        historyUrl.searchParams.set('visitor_id', visitorId);
-
         const response = await fetch(historyUrl.toString(), {
-          method: 'GET',
+          method: 'POST',
           mode: 'cors',
           credentials: 'omit',
           cache: 'no-store',
-          headers: { Accept: 'application/json' }
+          headers: browserHeaders(true),
+          body: JSON.stringify({ visitor_id: visitorId })
         });
 
         if (!response.ok) return;
@@ -657,7 +806,7 @@
         submit.disabled=true; status.textContent='Sending verification…';
         try {
           const url=new URL(IDENTITY_ENDPOINT); url.searchParams.set('site_key',SITE_KEY);
-          const response=await fetch(url.toString(),{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({mode:'recognize_me',visitor_id:visitorId,session_id:this.sessionId,email,privacy_acknowledged:true})});
+          const response=await fetch(url.toString(),{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',headers:browserHeaders(true),body:JSON.stringify({mode:'recognize_me',visitor_id:visitorId,session_id:this.sessionId,email,privacy_acknowledged:true})});
           const payload=await response.json().catch(()=>null);
           if (response.status===429) { status.textContent='Too many verification attempts. Try again in a few minutes.'; return; }
           if (!response.ok || !payload?.ok) throw new Error(payload?.error||`identity_${response.status}`);
@@ -677,6 +826,7 @@
 
     open() {
       this.isOpen = true;
+      if (!this.chatReady) void this.initializeConversation();
       this.panel.hidden = false;
       this.launcher.setAttribute('aria-expanded', 'true');
       this.launcher.setAttribute('aria-label', `Close ${this.assistantName || 'Wraya'} chat`);
@@ -896,7 +1046,7 @@
       submit.disabled=true; status.textContent='Sending securely…';
       try {
         const url=new URL(LEAD_ENDPOINT); url.searchParams.set('site_key',SITE_KEY);
-        const response=await fetch(url.toString(),{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({visitor_id:visitorId,session_id:this.sessionId,full_name:fullName,email:email||null,phone:phone||null,preferred_contact_method:preferred,privacy_acknowledged:true,sms_nonmarketing_consent:Boolean(phone&&smsNon),sms_marketing_consent:Boolean(phone&&smsMarketing),page_url:location.href})});
+        const response=await fetch(url.toString(),{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',headers:browserHeaders(true),body:JSON.stringify({visitor_id:visitorId,session_id:this.sessionId,full_name:fullName,email:email||null,phone:phone||null,preferred_contact_method:preferred,privacy_acknowledged:true,sms_nonmarketing_consent:Boolean(phone&&smsNon),sms_marketing_consent:Boolean(phone&&smsMarketing),page_url:location.href})});
         const payload=await response.json().catch(()=>null);
         if (response.status===429) { status.textContent='Too many attempts. Please try again in a few minutes.'; return; }
         if (!response.ok || !payload?.ok) throw new Error(payload?.error||`lead_${response.status}`);
@@ -924,6 +1074,7 @@
     }
 
     async sendMessage() {
+      if (!this.chatReady) return;
       const text = this.input.value.trim();
       const image = this.selectedImage;
       if ((!text && !image) || this.pending) return;
@@ -957,9 +1108,9 @@
           fd.append('message_text', text || 'I sent a photo.');
           fd.append('page_url', location.href);
           fd.append('image', image, image.name || 'photo');
-          fetchOptions = { method:'POST', mode:'cors', credentials:'omit', cache:'no-store', signal:controller.signal, headers:{Accept:'application/json'}, body:fd };
+          fetchOptions = { method:'POST', mode:'cors', credentials:'omit', cache:'no-store', signal:controller.signal, headers:browserHeaders(), body:fd };
         } else {
-          fetchOptions = { method:'POST', mode:'cors', credentials:'omit', cache:'no-store', signal:controller.signal, headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({visitor_id:visitorId,request_id:requestId,message_text:text,page_url:location.href}) };
+          fetchOptions = { method:'POST', mode:'cors', credentials:'omit', cache:'no-store', signal:controller.signal, headers:browserHeaders(true), body:JSON.stringify({visitor_id:visitorId,request_id:requestId,message_text:text,page_url:location.href}) };
         }
 
         const response = await fetch(endpoint.toString(), fetchOptions);

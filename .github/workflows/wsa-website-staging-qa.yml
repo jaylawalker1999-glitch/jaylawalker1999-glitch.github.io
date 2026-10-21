@@ -1,0 +1,98 @@
+name: WSA Public Website Staging QA
+on:
+  pull_request:
+    paths:
+      - index.html
+      - wraya-widget.js
+      - site.js
+      - verify-email.html
+      - verify-email.js
+      - 'qa/browser/**'
+      - _headers
+      - .github/workflows/wsa-website-staging-qa.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  frontend-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check widget JavaScript syntax
+        run: |
+          node --check wraya-widget.js
+          node --check site.js
+          node --check verify-email.js
+      - name: Validate required staging wiring and content
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs'), assert=require('node:assert/strict');
+          const html=fs.readFileSync('index.html','utf8');
+          const js=fs.readFileSync('wraya-widget.js','utf8');
+          const headers=fs.readFileSync('_headers','utf8');
+          const siteJs=fs.readFileSync('site.js','utf8');
+          const verificationHtml=fs.readFileSync('verify-email.html','utf8');
+          const verificationJs=fs.readFileSync('verify-email.js','utf8');
+          assert(verificationHtml.includes('src="/verify-email.js"'));
+          assert(verificationJs.includes('window.history.replaceState'), 'Email token must be removed from URL');
+          assert(verificationJs.includes('addEventListener("click"'), 'Verification must require explicit click');
+          assert(!verificationHtml.includes('verification_token'), 'Email token must never appear in static HTML');
+          assert.match(html,/<script src="\/site\.js" defer><\/script>/);
+          assert(!/\bon(click|load|change|submit|error|focus|input)=/i.test(html),
+            'Inline HTML event handlers must be removed under CSP');
+          assert.match(siteJs,/addEventListener\('click', closeMobile\)/);
+          assert.match(siteJs,/addEventListener\('click', toggleMobile\)/);
+          assert.match(siteJs,/addEventListener\('click', runCalc\)/);
+          assert.match(siteJs,/toggleFaq\(btn\)/);
+          const csp=headers.split('Content-Security-Policy:')[1];
+          assert(csp && csp.includes("script-src 'self' https://challenges.cloudflare.com"));
+          assert(!csp.includes("script-src 'self' 'unsafe-inline'"));
+          assert(csp.includes("script-src-attr 'none'"));
+          assert(csp.includes("connect-src 'self' https://xdsblwbujxizqipgsaik.supabase.co"));
+          assert(csp.includes("frame-src https://challenges.cloudflare.com"));
+          assert(!html.includes('Founding Client Advantage'));
+          assert.match(html,/wraya-widget\.js/);
+          assert.match(html,/data-site-key="wsa_pub_[a-f0-9]+"/);
+          assert.match(js,/bootstrapBrowserSession/);
+          assert.match(js,/X-Wraya-Browser-Session/);
+          // Keep HTML static; render customer messages through textContent.
+          assert.equal((js.match(/\.innerHTML\s*=/g)||[]).length,1);
+          const shellStart=js.indexOf('this.shadowRoot.innerHTML = `');
+          const shellEnd=js.indexOf('`;',shellStart+28);
+          assert(shellStart>=0 && shellEnd>shellStart, 'static shell required');
+          assert(!js.slice(shellStart,shellEnd).includes(String.fromCharCode(36,123)), 'HTML shell must not interpolate runtime values');
+          assert(!/\beval\s*\(/.test(js), 'eval must never appear in widget code');
+          assert.match(js,/browserHeaders\(true\)/);
+          assert.match(js,/turnstile_token/);
+          assert.match(js,/wraya_web_bootstrap/);
+          assert.match(js,/obtainBotCheckToken/);
+          assert.match(js,/async initializeConversation\(\)/);
+          assert.match(js,/if \(!this\.chatReady\) void this\.initializeConversation\(\)/);
+          assert.match(js,/if \(!this\.chatReady\) return;/);
+          const boot=js.slice(js.indexOf('async bootstrap() {'),js.indexOf('async initializeConversation()'));
+          assert(!boot.includes('await this.bootstrapBrowserSession()'), 'Turnstile must not run on homepage load');
+          assert(js.includes('globalThis.turnstile.render('));
+          assert(js.includes('https://challenges.cloudflare.com/turnstile/v0/api.js'));
+          assert.match(headers,/X-Content-Type-Options: nosniff/);
+          console.log('PASS: staging mount, credential integration, callout removal, baseline headers');
+          NODE
+
+  isolated-browser-qa:
+    needs: frontend-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned isolated browser test dependency
+        working-directory: qa/browser
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium for synthetic UI tests
+        working-directory: qa/browser
+        run: npx playwright install --with-deps chromium
+      - name: Test website and Wraya against mocked endpoints only
+        working-directory: qa/browser
+        run: npm test
