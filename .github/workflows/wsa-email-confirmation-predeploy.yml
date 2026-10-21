@@ -1,0 +1,49 @@
+name: WSA Email Confirmation Predeploy QA
+on:
+  push:
+    branches:
+      - security/wraya-email-confirmation-predeploy-20261021
+    paths:
+      - verify-email.html
+      - verify-email.js
+      - .github/workflows/wsa-email-confirmation-predeploy.yml
+  pull_request:
+    paths:
+      - verify-email.html
+      - verify-email.js
+      - .github/workflows/wsa-email-confirmation-predeploy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  safe-static-email-page:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check browser script
+        run: node --check verify-email.js
+      - name: Verify standalone page release safety
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs'), assert=require('node:assert/strict');
+          const html=fs.readFileSync('verify-email.html','utf8');
+          const js=fs.readFileSync('verify-email.js','utf8');
+          assert(html.includes('<script src="/verify-email.js" defer></script>'));
+          assert(html.includes('http-equiv="Content-Security-Policy"'));
+          assert(html.includes("script-src 'self'"));
+          assert(!/\bon(click|submit|load|error)=/i.test(html));
+          assert(!/<script\b(?![^>]*\bsrc=)/i.test(html));
+          assert(!html.includes('verification_token'));
+          assert(js.includes('window.history.replaceState'));
+          assert(js.includes('addEventListener("click"'));
+          assert(js.includes('new URLSearchParams({ verification_token: token })'));
+          assert(js.includes('credentials: "omit"'));
+          assert(!/\beval\s*\(/.test(js));
+          console.log('PASS: email page has CSP, no inline JS, no auto-redeem, no static token');
+          NODE
