@@ -21,7 +21,7 @@ async function mock(page,deny=false){
       audit.bootstraps.push({data,headers:req.headers()});
       const restored=data.visitor_id===visitor&&req.headers()["x-wraya-browser-session"]===bearer;
       if(deny){status=403;body={ok:false,error:"bot_check_failed"};}
-      else if(restored&&audit.rejectRestore){status=403;body={ok:false,error:"browser_credential_invalid"};}
+      else if(restored&&audit.rejectRestore&&!data.turnstile_token){status=403;body={ok:false,error:"browser_credential_invalid"};}
       else if(data.turnstile_token==="synthetic-challenge"&&audit.rejectRestore)
         body={ok:true,visitor_id:"66666666-6666-4666-8666-666666666666",browser_session_token:"B".repeat(43),restored:false};
       else if(restored||data.turnstile_token==="synthetic-challenge")
