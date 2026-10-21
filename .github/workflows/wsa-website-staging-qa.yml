@@ -5,6 +5,8 @@ on:
       - index.html
       - wraya-widget.js
       - site.js
+      - verify-email.html
+      - verify-email.js
       - 'qa/browser/**'
       - _headers
       - .github/workflows/wsa-website-staging-qa.yml
@@ -21,6 +23,7 @@ jobs:
         run: |
           node --check wraya-widget.js
           node --check site.js
+          node --check verify-email.js
       - name: Validate required staging wiring and content
         run: |
           node - <<'NODE'
@@ -29,6 +32,12 @@ jobs:
           const js=fs.readFileSync('wraya-widget.js','utf8');
           const headers=fs.readFileSync('_headers','utf8');
           const siteJs=fs.readFileSync('site.js','utf8');
+          const verificationHtml=fs.readFileSync('verify-email.html','utf8');
+          const verificationJs=fs.readFileSync('verify-email.js','utf8');
+          assert(verificationHtml.includes('src="/verify-email.js"'));
+          assert(verificationJs.includes('window.history.replaceState'), 'Email token must be removed from URL');
+          assert(verificationJs.includes('addEventListener("click"'), 'Verification must require explicit click');
+          assert(!verificationHtml.includes('verification_token'), 'Email token must never appear in static HTML');
           assert.match(html,/<script src="\/site\.js" defer><\/script>/);
           assert(!/\bon(click|load|change|submit|error|focus|input)=/i.test(html),
             'Inline HTML event handlers must be removed under CSP');
