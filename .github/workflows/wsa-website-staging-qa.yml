@@ -52,7 +52,8 @@ jobs:
           const shellStart=js.indexOf('this.shadowRoot.innerHTML = `');
           const shellEnd=js.indexOf('`;',shellStart+28);
           assert(shellStart>=0 && shellEnd>shellStart, 'static shell required');
-          assert(!js.slice(shellStart,shellEnd).includes('
+          assert(!js.slice(shellStart,shellEnd).includes(String.fromCharCode(36,123)), 'HTML shell must not interpolate runtime values');
+          assert(!/\beval\s*\(/.test(js), 'eval must never appear in widget code');
           assert.match(js,/browserHeaders\(true\)/);
           assert.match(js,/turnstile_token/);
           assert.match(js,/wraya_web_bootstrap/);
