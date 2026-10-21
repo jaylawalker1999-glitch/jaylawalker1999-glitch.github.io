@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Confirm your email | Wraya</title>
+  <style>
+    :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#090909;color:#f7f7f7;font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif}
+    main{max-width:510px;width:100%;padding:clamp(25px,5vw,42px);background:#141414;border:1px solid #8f752f;border-radius:20px;box-shadow:0 15px 45px #0008}
+    .logo{font-size:13px;letter-spacing:3px;font-weight:800;color:#e5ba52;margin-bottom:28px}
+    h1{margin:0 0 13px;font-size:clamp(25px,4vw,34px);line-height:1.18}p{color:#d3d3d3;line-height:1.65}
+    button{background:#e5ba52;border:0;color:#101010;border-radius:10px;padding:14px 22px;min-height:48px;font-size:16px;font-weight:800;cursor:pointer;margin:14px 0 6px}
+    button:focus-visible,a:focus-visible{outline:3px solid #fff;outline-offset:3px}button:disabled{opacity:.5;cursor:default}
+    #result{min-height:1.5em}a{color:#e5ba52}footer{font-size:13px;margin-top:25px;color:#bbb}
+    .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+  </style>
+  <script src="/verify-email.js" defer></script>
+</head>
+<body>
+  <main aria-labelledby="verify-title">
+    <div class="logo">WRAYA · WSA</div>
+    <h1 id="verify-title">Confirm your email</h1>
+    <p id="instructions">Confirming lets Wraya recognize you securely across supported conversations. If you didn't request this, you can close this page without changing anything.</p>
+    <button id="confirm" type="button" disabled>Confirm email</button>
+    <p id="result" role="status" aria-live="polite">Checking verification link…</p>
+    <footer>
+      <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a> · <a href="/">Walker Systems &amp; Automation</a>
+    </footer>
+  </main>
+</body>
+</html>
