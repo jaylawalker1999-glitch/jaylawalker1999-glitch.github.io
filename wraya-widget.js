@@ -90,8 +90,9 @@
       const s = document.createElement('script');
       s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
       s.async = true;
-      s.onload = () => (globalThis.turnstile ? resolve(globalThis.turnstile) : reject(new Error('turnstile_unavailable')));
-      s.onerror = () => reject(new Error('turnstile_unavailable'));
+      const loadTimer = setTimeout(() => reject(new Error('turnstile_load_timeout')), 15000);
+      s.onload = () => { clearTimeout(loadTimer); globalThis.turnstile ? resolve(globalThis.turnstile) : reject(new Error('turnstile_unavailable')); };
+      s.onerror = () => { clearTimeout(loadTimer); reject(new Error('turnstile_unavailable')); };
       document.head.appendChild(s);
     }).catch((e) => { turnstilePromise = null; throw e; });
     return turnstilePromise;
@@ -213,7 +214,10 @@
         this.maxImageBytes = Number(payload.site.photo_upload?.max_bytes) || this.maxImageBytes;
         this.applyConfig();
         await this.loadCompliance();
-        await ensureBrowserSession();
+        // Only reuse a stored credential here. A new session (which may show a
+        // Turnstile challenge) is requested when the visitor sends a message.
+        const stored = loadStoredCredential();
+        if (stored) applyCredential(stored);
         await this.loadHistory();
         this.showReady();
       } catch (error) {
@@ -1059,8 +1063,14 @@
       this.composerStatus.textContent = image ? 'Analyzing photo…' : '';
       this.scrollToBottom(true);
 
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), image ? 60000 : 30000);
+      const requestTimeoutMs = image ? 60000 : 30000;
+      let controller = null;
+      let timeout = null;
+      const startTimer = () => {
+        clearTimeout(timeout);
+        controller = new AbortController();
+        timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
+      };
 
       try {
         const endpoint = new URL(CHAT_ENDPOINT);
@@ -1079,13 +1089,19 @@
           return { method:'POST', mode:'cors', credentials:'omit', cache:'no-store', signal:controller.signal, headers:withSession({'Content-Type':'application/json',Accept:'application/json'}), body:JSON.stringify({visitor_id:visitorId,request_id:requestId,message_text:text,page_url:location.href}) };
         };
 
+        // Obtain a session (no-op when one is stored) before the request timer
+        // starts, so a Turnstile challenge does not eat into the request timeout.
+        await ensureBrowserSession();
+        startTimer();
         let response = await fetch(endpoint.toString(), buildOptions());
         let payload = await response.json().catch(() => null);
         if (response.status === 403 && payload?.error === 'browser_session_not_authorized') {
           // Missing/expired/revoked proof: get a fresh server-issued session once, then retry.
           // A fresh session starts a new conversation; old messages stay with the old proof.
+          clearTimeout(timeout);
           if (await ensureBrowserSession(true)) {
             this.sessionId = null;
+            startTimer();
             response = await fetch(endpoint.toString(), buildOptions());
             payload = await response.json().catch(() => null);
           }
