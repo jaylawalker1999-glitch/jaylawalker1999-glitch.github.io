@@ -9,6 +9,8 @@
   const HISTORY_ENDPOINT = (script.dataset.historyEndpoint || 'https://xdsblwbujxizqipgsaik.supabase.co/functions/v1/wsa-wraya-web-chat-history').trim();
   const LEAD_ENDPOINT = (script.dataset.leadEndpoint || 'https://xdsblwbujxizqipgsaik.supabase.co/functions/v1/wsa-wraya-web-lead').trim();
   const IDENTITY_ENDPOINT = (script.dataset.identityEndpoint || 'https://xdsblwbujxizqipgsaik.supabase.co/functions/v1/wsa-wraya-web-identity').trim();
+  const SESSION_ENDPOINT = (script.dataset.sessionEndpoint || 'https://xdsblwbujxizqipgsaik.supabase.co/functions/v1/wsa-wraya-web-session').trim();
+  const TURNSTILE_SITE_KEY = (script.dataset.turnstileSiteKey || '').trim();
   const STORAGE_PREFIX = 'wsa_wraya_web_v1';
 
   if (!SITE_KEY) {
@@ -35,6 +37,9 @@
     },
     set(key, value) {
       try { localStorage.setItem(key, value); } catch { /* non-fatal */ }
+    },
+    remove(key) {
+      try { localStorage.removeItem(key); } catch { /* non-fatal */ }
     }
   };
 
@@ -44,6 +49,115 @@
     visitorId = makeId();
     safeLocalStorage.set(visitorStorageKey, visitorId);
   }
+
+  // ---- Secure browser session (#145) ----------------------------------------
+  // When the site enforces browser credentials, the server issues the visitor ID and
+  // a private proof token after a Cloudflare Turnstile check. The token is sent only
+  // in the x-wraya-browser-session header (never in URLs) so a leaked visitor ID can
+  // no longer read or continue someone else's conversation. If the site does not
+  // enforce credentials, nothing changes: the legacy visitor ID keeps working.
+  const credentialStorageKey = `${STORAGE_PREFIX}:${SITE_KEY}:browser_session`;
+  const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+  let browserToken = null;
+  let sessionSecurity = null;
+  let sessionPromise = null;
+  let turnstilePromise = null;
+
+  const loadStoredCredential = () => {
+    try {
+      const c = JSON.parse(safeLocalStorage.get(credentialStorageKey) || 'null');
+      if (!c || !TOKEN_PATTERN.test(String(c.token || '')) || !c.visitor_id) return null;
+      if (c.expires_at && Date.parse(c.expires_at) <= Date.now() + 60000) return null;
+      return c;
+    } catch { return null; }
+  };
+  const applyCredential = (c) => {
+    browserToken = c.token;
+    visitorId = c.visitor_id;
+    safeLocalStorage.set(visitorStorageKey, visitorId);
+    safeLocalStorage.set(credentialStorageKey, JSON.stringify(c));
+  };
+  const clearCredential = () => {
+    browserToken = null;
+    safeLocalStorage.remove(credentialStorageKey);
+  };
+  const withSession = (headers = {}) => (browserToken ? { ...headers, 'x-wraya-browser-session': browserToken } : headers);
+
+  const loadTurnstile = () => {
+    if (turnstilePromise) return turnstilePromise;
+    turnstilePromise = new Promise((resolve, reject) => {
+      if (globalThis.turnstile) return resolve(globalThis.turnstile);
+      const s = document.createElement('script');
+      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      s.async = true;
+      const loadTimer = setTimeout(() => reject(new Error('turnstile_load_timeout')), 15000);
+      s.onload = () => { clearTimeout(loadTimer); globalThis.turnstile ? resolve(globalThis.turnstile) : reject(new Error('turnstile_unavailable')); };
+      s.onerror = () => { clearTimeout(loadTimer); reject(new Error('turnstile_unavailable')); };
+      document.head.appendChild(s);
+    }).catch((e) => { turnstilePromise = null; throw e; });
+    return turnstilePromise;
+  };
+  const solveTurnstile = async (action) => {
+    const ts = await loadTurnstile();
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:2147483646;';
+    document.body.appendChild(host);
+    let widgetId = null;
+    try {
+      return await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('turnstile_timeout')), 45000);
+        widgetId = ts.render(host, {
+          sitekey: TURNSTILE_SITE_KEY,
+          action,
+          appearance: 'interaction-only',
+          callback: (token) => { clearTimeout(timer); resolve(token); },
+          'error-callback': () => { clearTimeout(timer); reject(new Error('turnstile_failed')); },
+          'expired-callback': () => { clearTimeout(timer); reject(new Error('turnstile_expired')); }
+        });
+      });
+    } finally {
+      try { if (widgetId !== null) ts.remove(widgetId); } catch { /* non-fatal */ }
+      host.remove();
+    }
+  };
+  // Returns true when this browser holds a valid server-issued credential.
+  const ensureBrowserSession = async (force = false) => {
+    if (!force) {
+      const stored = loadStoredCredential();
+      if (stored) { applyCredential(stored); return true; }
+    } else {
+      clearCredential();
+    }
+    if (sessionPromise) return sessionPromise;
+    sessionPromise = (async () => {
+      try {
+        const url = new URL(SESSION_ENDPOINT);
+        url.searchParams.set('site_key', SITE_KEY);
+        if (!sessionSecurity) {
+          const r = await fetch(url.toString(), { method: 'GET', mode: 'cors', credentials: 'omit', cache: 'no-store', headers: { Accept: 'application/json' } });
+          if (!r.ok) return false;
+          sessionSecurity = await r.json().catch(() => null);
+        }
+        if (sessionSecurity?.turnstile_required !== true || !TURNSTILE_SITE_KEY) return false;
+        const challenge = await solveTurnstile(String(sessionSecurity.turnstile_action || 'wraya_session'));
+        const r = await fetch(url.toString(), {
+          method: 'POST', mode: 'cors', credentials: 'omit', cache: 'no-store',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ turnstile_token: challenge })
+        });
+        const p = await r.json().catch(() => null);
+        if (!r.ok || !p?.ok || !TOKEN_PATTERN.test(String(p.browser_token || '')) || !p.visitor_id) return false;
+        applyCredential({ visitor_id: p.visitor_id, token: p.browser_token, expires_at: p.expires_at || null });
+        return true;
+      } catch (error) {
+        console.warn('[Wraya] Secure session unavailable:', error);
+        return false;
+      } finally {
+        sessionPromise = null;
+      }
+    })();
+    return sessionPromise;
+  };
 
   class WrayaChat extends HTMLElement {
     constructor() {
@@ -100,6 +214,10 @@
         this.maxImageBytes = Number(payload.site.photo_upload?.max_bytes) || this.maxImageBytes;
         this.applyConfig();
         await this.loadCompliance();
+        // Only reuse a stored credential here. A new session (which may show a
+        // Turnstile challenge) is requested when the visitor sends a message.
+        const stored = loadStoredCredential();
+        if (stored) applyCredential(stored);
         await this.loadHistory();
         this.showReady();
       } catch (error) {
@@ -150,17 +268,19 @@
     }
 
     async loadHistory() {
+      // History is only ever returned to the browser that holds the session proof.
+      if (!browserToken) return;
       try {
         const historyUrl = new URL(HISTORY_ENDPOINT);
         historyUrl.searchParams.set('site_key', SITE_KEY);
-        historyUrl.searchParams.set('visitor_id', visitorId);
 
         const response = await fetch(historyUrl.toString(), {
-          method: 'GET',
+          method: 'POST',
           mode: 'cors',
           credentials: 'omit',
           cache: 'no-store',
-          headers: { Accept: 'application/json' }
+          headers: withSession({ 'Content-Type': 'application/json', Accept: 'application/json' }),
+          body: JSON.stringify({ visitor_id: visitorId })
         });
 
         if (!response.ok) return;
@@ -657,8 +777,15 @@
         submit.disabled=true; status.textContent='Sending verification…';
         try {
           const url=new URL(IDENTITY_ENDPOINT); url.searchParams.set('site_key',SITE_KEY);
-          const response=await fetch(url.toString(),{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({mode:'recognize_me',visitor_id:visitorId,session_id:this.sessionId,email,privacy_acknowledged:true})});
-          const payload=await response.json().catch(()=>null);
+          // Recognize-me is offered before the first message, so obtain a session first.
+          await ensureBrowserSession();
+          const post=()=>fetch(url.toString(),{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',headers:withSession({'Content-Type':'application/json',Accept:'application/json'}),body:JSON.stringify({mode:'recognize_me',visitor_id:visitorId,session_id:this.sessionId,email,privacy_acknowledged:true})});
+          let response=await post();
+          let payload=await response.json().catch(()=>null);
+          if (response.status===403 && payload?.error==='browser_session_not_authorized' && await ensureBrowserSession(true)) {
+            this.sessionId=null; // re-issued session = new visitor; the server opens a fresh session
+            response=await post(); payload=await response.json().catch(()=>null);
+          }
           if (response.status===429) { status.textContent='Too many verification attempts. Try again in a few minutes.'; return; }
           if (!response.ok || !payload?.ok) throw new Error(payload?.error||`identity_${response.status}`);
           const success=document.createElement('div'); success.className='followup-success'; success.textContent='Verification email sent. Open the link, then come back here and keep chatting — if it matches your existing client record, Wraya will securely continue with your relevant connected history.';
@@ -896,7 +1023,8 @@
       submit.disabled=true; status.textContent='Sending securely…';
       try {
         const url=new URL(LEAD_ENDPOINT); url.searchParams.set('site_key',SITE_KEY);
-        const response=await fetch(url.toString(),{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({visitor_id:visitorId,session_id:this.sessionId,full_name:fullName,email:email||null,phone:phone||null,preferred_contact_method:preferred,privacy_acknowledged:true,sms_nonmarketing_consent:Boolean(phone&&smsNon),sms_marketing_consent:Boolean(phone&&smsMarketing),page_url:location.href})});
+        await ensureBrowserSession();
+        const response=await fetch(url.toString(),{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',headers:withSession({'Content-Type':'application/json',Accept:'application/json'}),body:JSON.stringify({visitor_id:visitorId,session_id:this.sessionId,full_name:fullName,email:email||null,phone:phone||null,preferred_contact_method:preferred,privacy_acknowledged:true,sms_nonmarketing_consent:Boolean(phone&&smsNon),sms_marketing_consent:Boolean(phone&&smsMarketing),page_url:location.href})});
         const payload=await response.json().catch(()=>null);
         if (response.status===429) { status.textContent='Too many attempts. Please try again in a few minutes.'; return; }
         if (!response.ok || !payload?.ok) throw new Error(payload?.error||`lead_${response.status}`);
@@ -943,27 +1071,49 @@
       this.composerStatus.textContent = image ? 'Analyzing photo…' : '';
       this.scrollToBottom(true);
 
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), image ? 60000 : 30000);
+      const requestTimeoutMs = image ? 60000 : 30000;
+      let controller = null;
+      let timeout = null;
+      const startTimer = () => {
+        clearTimeout(timeout);
+        controller = new AbortController();
+        timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
+      };
 
       try {
         const endpoint = new URL(CHAT_ENDPOINT);
         endpoint.searchParams.set('site_key', SITE_KEY);
-        let fetchOptions;
-        if (image) {
-          const fd = new FormData();
-          fd.append('visitor_id', visitorId);
-          fd.append('request_id', requestId);
-          fd.append('message_text', text || 'I sent a photo.');
-          fd.append('page_url', location.href);
-          fd.append('image', image, image.name || 'photo');
-          fetchOptions = { method:'POST', mode:'cors', credentials:'omit', cache:'no-store', signal:controller.signal, headers:{Accept:'application/json'}, body:fd };
-        } else {
-          fetchOptions = { method:'POST', mode:'cors', credentials:'omit', cache:'no-store', signal:controller.signal, headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({visitor_id:visitorId,request_id:requestId,message_text:text,page_url:location.href}) };
-        }
+        // Built per attempt so a re-issued session (new visitor ID + token) is used on retry.
+        const buildOptions = () => {
+          if (image) {
+            const fd = new FormData();
+            fd.append('visitor_id', visitorId);
+            fd.append('request_id', requestId);
+            fd.append('message_text', text || 'I sent a photo.');
+            fd.append('page_url', location.href);
+            fd.append('image', image, image.name || 'photo');
+            return { method:'POST', mode:'cors', credentials:'omit', cache:'no-store', signal:controller.signal, headers:withSession({Accept:'application/json'}), body:fd };
+          }
+          return { method:'POST', mode:'cors', credentials:'omit', cache:'no-store', signal:controller.signal, headers:withSession({'Content-Type':'application/json',Accept:'application/json'}), body:JSON.stringify({visitor_id:visitorId,request_id:requestId,message_text:text,page_url:location.href}) };
+        };
 
-        const response = await fetch(endpoint.toString(), fetchOptions);
-        const payload = await response.json().catch(() => null);
+        // Obtain a session (no-op when one is stored) before the request timer
+        // starts, so a Turnstile challenge does not eat into the request timeout.
+        await ensureBrowserSession();
+        startTimer();
+        let response = await fetch(endpoint.toString(), buildOptions());
+        let payload = await response.json().catch(() => null);
+        if (response.status === 403 && payload?.error === 'browser_session_not_authorized') {
+          // Missing/expired/revoked proof: get a fresh server-issued session once, then retry.
+          // A fresh session starts a new conversation; old messages stay with the old proof.
+          clearTimeout(timeout);
+          if (await ensureBrowserSession(true)) {
+            this.sessionId = null;
+            startTimer();
+            response = await fetch(endpoint.toString(), buildOptions());
+            payload = await response.json().catch(() => null);
+          }
+        }
 
         if (response.status === 429) {
           const retry = Number(payload?.retry_after_seconds) || 60;
