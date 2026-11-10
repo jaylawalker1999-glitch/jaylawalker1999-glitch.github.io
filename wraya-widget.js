@@ -777,8 +777,15 @@
         submit.disabled=true; status.textContent='Sending verification…';
         try {
           const url=new URL(IDENTITY_ENDPOINT); url.searchParams.set('site_key',SITE_KEY);
-          const response=await fetch(url.toString(),{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',headers:withSession({'Content-Type':'application/json',Accept:'application/json'}),body:JSON.stringify({mode:'recognize_me',visitor_id:visitorId,session_id:this.sessionId,email,privacy_acknowledged:true})});
-          const payload=await response.json().catch(()=>null);
+          // Recognize-me is offered before the first message, so obtain a session first.
+          await ensureBrowserSession();
+          const post=()=>fetch(url.toString(),{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',headers:withSession({'Content-Type':'application/json',Accept:'application/json'}),body:JSON.stringify({mode:'recognize_me',visitor_id:visitorId,session_id:this.sessionId,email,privacy_acknowledged:true})});
+          let response=await post();
+          let payload=await response.json().catch(()=>null);
+          if (response.status===403 && payload?.error==='browser_session_not_authorized' && await ensureBrowserSession(true)) {
+            this.sessionId=null; // re-issued session = new visitor; the server opens a fresh session
+            response=await post(); payload=await response.json().catch(()=>null);
+          }
           if (response.status===429) { status.textContent='Too many verification attempts. Try again in a few minutes.'; return; }
           if (!response.ok || !payload?.ok) throw new Error(payload?.error||`identity_${response.status}`);
           const success=document.createElement('div'); success.className='followup-success'; success.textContent='Verification email sent. Open the link, then come back here and keep chatting — if it matches your existing client record, Wraya will securely continue with your relevant connected history.';
@@ -1016,6 +1023,7 @@
       submit.disabled=true; status.textContent='Sending securely…';
       try {
         const url=new URL(LEAD_ENDPOINT); url.searchParams.set('site_key',SITE_KEY);
+        await ensureBrowserSession();
         const response=await fetch(url.toString(),{method:'POST',mode:'cors',credentials:'omit',cache:'no-store',headers:withSession({'Content-Type':'application/json',Accept:'application/json'}),body:JSON.stringify({visitor_id:visitorId,session_id:this.sessionId,full_name:fullName,email:email||null,phone:phone||null,preferred_contact_method:preferred,privacy_acknowledged:true,sms_nonmarketing_consent:Boolean(phone&&smsNon),sms_marketing_consent:Boolean(phone&&smsMarketing),page_url:location.href})});
         const payload=await response.json().catch(()=>null);
         if (response.status===429) { status.textContent='Too many attempts. Please try again in a few minutes.'; return; }
