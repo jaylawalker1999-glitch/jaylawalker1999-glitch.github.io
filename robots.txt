@@ -1,0 +1,11 @@
+# Public marketing website only. Private WSA services use separate hosts.
+User-agent: *
+Allow: /
+
+# Permit Gemini grounding for the published marketing homepage only.
+# Google-Extended also permits Google's model training for this page.
+User-agent: Google-Extended
+Allow: /$
+Disallow: /
+
+Sitemap: https://walkersystems.tech/sitemap.xml
