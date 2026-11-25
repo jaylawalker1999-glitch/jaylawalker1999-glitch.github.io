@@ -1,0 +1,11 @@
+# Public WSA marketing website. Cloudflare-managed crawler policy remains active.
+# Preserve the training opt-out at the origin as well.
+User-agent: Google-Extended
+User-agent: GPTBot
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: *
+Allow: /
+
+Sitemap: https://walkersystems.tech/sitemap.xml
